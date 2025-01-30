@@ -1,2 +1,5 @@
 # CS250_S25_Asteroids
-A finals project for CS250, Algorithms and Problem Solving II. 
+My final project for CS250, Algorithms and Problem Solving II. 
+
+Devlog: 
+As I belive I will run into perfromace issues using Swing I will be learning how to use libGDX  
