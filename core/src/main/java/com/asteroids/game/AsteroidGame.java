@@ -95,11 +95,12 @@ public class AsteroidGame extends ApplicationAdapter {
 
     @Override
     public void render() {
+        // Set the background color (#382b26)
+        Gdx.gl.glClearColor(0.2196f, 0.1686f, 0.1490f, 1.0f);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT); // Clear the screen with the new color
+
         handleInput();
         update(Gdx.graphics.getDeltaTime());
-
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         // Draw everything
         batch.setProjectionMatrix(camera.combined);
