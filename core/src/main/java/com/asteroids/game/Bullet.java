@@ -28,7 +28,7 @@ public class Bullet {
 
     private TextureRegion createWhitePixel() {
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(Color.WHITE);
+        pixmap.setColor(new Color(0.7216f, 0.7608f, 0.7255f, 1.0f));
         pixmap.fill();
         Texture texture = new Texture(pixmap);
         pixmap.dispose();
