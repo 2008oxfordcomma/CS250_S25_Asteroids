@@ -10,7 +10,7 @@ public class Player {
     Vector2 position;
     Vector2 velocity;
     float angle;
-    float speed = 300;
+    float speed = 500;
     float fireCooldown;
 
     public Player() {
@@ -47,6 +47,8 @@ public class Player {
     public void draw(ShapeRenderer renderer) {
         renderer.identity();
         renderer.translate(position.x, position.y, 0);
+
+        renderer.setColor(0.7216f, 0.7608f, 0.7255f, 1.0f);
         renderer.rotate(0, 0, 1, angle + 90);
         renderer.triangle(-10, 10, 0, -15, 10, 10);
     }
