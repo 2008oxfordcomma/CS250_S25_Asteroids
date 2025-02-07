@@ -1,3 +1,8 @@
+/**
+ * Author: Dre Harm
+ * Date: 2/4/25
+ */
+
 package com.asteroids.game;
 
 import com.badlogic.gdx.graphics.Color;
