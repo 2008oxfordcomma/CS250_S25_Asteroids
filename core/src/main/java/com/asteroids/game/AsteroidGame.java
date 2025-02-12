@@ -50,26 +50,23 @@ public class AsteroidGame extends ApplicationAdapter {
 
                 // Check for collision between bullet and asteroid
                 if (asteroid.getBounds().contains(bullet.position)) {
-                    // Remove the bullet
+                    // Remove bullet
                     bullets.removeIndex(i);
 
-                    // Handle asteroid (e.g., split or remove)
+                    // Handle asteroid
                     if (asteroid.size > 1) {
                         splitAsteroid(asteroid); // Split into smaller asteroids
                     }
                     asteroids.removeIndex(j); // Remove the original asteroid
-                    break; // Exit the inner loop since the bullet is destroyed
+                    break; // Exit loop since the bullet is destroyed
                 }
             }
         }
     }
 
     void splitAsteroid(Asteroid parent) {
-        for(int i = 0; i < 2; i++) {
-            asteroids.add(new Asteroid(
-                parent.position.cpy(),
-                parent.size - 1
-            ));
+        for (int i = 0; i < 2; i++) {
+            asteroids.add(new Asteroid(parent.position.cpy(), parent.size - 1));
         }
     }
 
