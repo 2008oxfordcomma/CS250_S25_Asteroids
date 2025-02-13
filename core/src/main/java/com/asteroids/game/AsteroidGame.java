@@ -24,6 +24,7 @@ public class AsteroidGame extends ApplicationAdapter {
     Array<Bullet> bullets;
     Array<Asteroid> asteroids;
     float asteroidSpawnTimer;
+    int level = 1;
 
     void updateBullets(float delta) {
         for (int i = bullets.size - 1; i >= 0; i--) {
@@ -108,7 +109,7 @@ public class AsteroidGame extends ApplicationAdapter {
         bullets = new Array<>();
         asteroids = new Array<>();
 
-        spawnInitialAsteroids();
+        levelUp();
     }
 
     void spawnInitialAsteroids() {
@@ -147,12 +148,32 @@ public class AsteroidGame extends ApplicationAdapter {
         if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) player.shoot(bullets);
     }
 
+    void levelUp() {
+        level++;
+        int numAsteroids = 4 + level; // More asteroids per level
+
+        for (int i = 0; i < numAsteroids; i++) {
+            Vector2 randomPos = new Vector2(MathUtils.random(800), MathUtils.random(600)); // eventually make this scale with the screen
+            int startSize = MathUtils.random(2,3); // starts with medium or large asteroids to give some variation
+
+            Asteroid newAsteroid = new Asteroid(randomPos, startSize);
+            newAsteroid.velocity.scl(1 + level * 0.1f); // slightly increase the speed
+            asteroids.add(newAsteroid);
+        }
+
+        player.position.set(400, 300);
+        player.velocity.set(0,0);
+    }
+
     void update(float delta) {
         player.update(delta);
         updateBullets(delta);
         updateAsteroids(delta);
         checkCollisions();
         wrapAroundScreen();
+        if (asteroids.size == 0) {
+            levelUp();
+        }
     }
 }
 
