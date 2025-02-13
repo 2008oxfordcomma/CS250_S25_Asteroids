@@ -43,8 +43,8 @@ public class Asteroid {
         float baseRadius = size * 10;
 
         for (int i = 0; i < vertexCount; i++) {
-            float angle = (i / (float) vertexCount) * 370f; // evenly spaced angles
-            float noiseFactor = PerlinNoise.noise(noiseOffset + i * 0.3f) * 6f; // small amount of distortion
+            float angle = (i / (float) vertexCount) * 360f; // evenly spaced angles
+            float noiseFactor = PerlinNoise.noise(noiseOffset + i * 0.5f) * 8f; // small amount of distortion
 
             float radius = baseRadius + noiseFactor;
             verticies[i * 2] = MathUtils.cosDeg(angle) * radius; // X pos
