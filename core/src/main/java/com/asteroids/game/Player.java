@@ -17,6 +17,9 @@ public class Player {
     float angle;
     float speed = 500;
     float fireCooldown;
+    int health = 3;
+    boolean isInvincible = false;
+    float invincibilityTimer = 0f;
 
     public Player() {
         position = new Vector2(400, 300);
@@ -47,6 +50,28 @@ public class Player {
         position.add(velocity.x * delta, velocity.y * delta);
         velocity.scl(0.98f); // Friction
         fireCooldown -= delta;
+
+        // reduce the invincibility timer
+        if (isInvincible) {
+            invincibilityTimer -= delta;
+            if (invincibilityTimer <= 0) {
+                isInvincible = false;
+            }
+        }
+    }
+
+    public void takeDamage() {
+        if (!isInvincible) {
+            health--;
+            isInvincible = true;
+            invincibilityTimer = 2.0f;
+
+            // respawn player at center if they're hit
+            if (health > 0) {
+                position.set(400, 300);
+                velocity.set(0, 0);
+            }
+        }
     }
 
     public void draw(ShapeRenderer renderer) {
