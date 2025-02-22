@@ -63,6 +63,16 @@ public class AsteroidGame extends ApplicationAdapter {
                 }
             }
         }
+        for (Asteroid asteroid : asteroids) { // player and asteroid collision
+            if (asteroid.getBounds().overlaps(new Circle(player.position.x, player.position.y, 10))) {
+                player.takeDamage();
+                break;
+            }
+        }
+
+        if (player.health <= 0) {
+            gameOver();
+        }
     }
 
     void splitAsteroid(Asteroid parent) {
@@ -138,6 +148,9 @@ public class AsteroidGame extends ApplicationAdapter {
 
         batch.begin();
         for (Bullet bullet : bullets) bullet.draw(batch);
+        BitmapFont font = new BitmapFont();
+        font.setColor(Color.WHITE);
+        font.draw(batch, "Health: " + player.health, 20, 580);
         batch.end();
     }
 
@@ -163,6 +176,19 @@ public class AsteroidGame extends ApplicationAdapter {
 
         player.position.set(400, 300);
         player.velocity.set(0,0);
+    }
+
+    void gameOver() {
+        System.out.println("Game Over! Restarting...");
+
+        // Reset game state
+        level = 1;
+        player.health = 3;
+        player.position.set(400, 300);
+        player.velocity.set(0, 0);
+        asteroids.clear();
+        bullets.clear();
+        levelUp(); // Restart at Level 1
     }
 
     void update(float delta) {
