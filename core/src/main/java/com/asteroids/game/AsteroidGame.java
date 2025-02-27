@@ -15,7 +15,16 @@ import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.Array;
 
+
+
 public class AsteroidGame extends ApplicationAdapter {
+
+    enum GameState {
+        TITLE, PLAYING, GAME_OVER
+    }
+
+    GameState gameState = GameState.TITLE;
+
     OrthographicCamera camera;
     SpriteBatch batch;
     ShapeRenderer shapeRenderer;
@@ -134,24 +143,50 @@ public class AsteroidGame extends ApplicationAdapter {
         Gdx.gl.glClearColor(0.2196f, 0.1686f, 0.1490f, 1.0f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT); // Clear the screen with the new color
 
-        handleInput();
-        update(Gdx.graphics.getDeltaTime());
-
-        // Draw everything
         batch.setProjectionMatrix(camera.combined);
         shapeRenderer.setProjectionMatrix(camera.combined);
 
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        player.draw(shapeRenderer);
-        for (Asteroid asteroid : asteroids) asteroid.draw(shapeRenderer);
-        shapeRenderer.end();
+        if (gameState == GameState.TITLE) {
+            renderTitleScreen();
+        } else if (gameState == GameState.PLAYING) {
+            // Normal game rendering
+            handleInput();
+            update(Gdx.graphics.getDeltaTime());
 
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            player.draw(shapeRenderer);
+            for (Asteroid asteroid : asteroids) asteroid.draw(shapeRenderer);
+            shapeRenderer.end();
+
+            batch.begin();
+            for (Bullet bullet : bullets) bullet.draw(batch);
+
+            // Draw player health
+            BitmapFont font = new BitmapFont();
+            font.setColor(Color.WHITE);
+            font.draw(batch, "Health: " + player.health, 20, 580);
+            font.draw(batch, "Level: " + (level - 1), 700, 580);
+            batch.end();
+        } else if (gameState == GameState.GAME_OVER) {
+            renderGameOverScreen();
+        }
+    }
+
+    void renderTitleScreen() {
         batch.begin();
-        for (Bullet bullet : bullets) bullet.draw(batch);
+
         BitmapFont font = new BitmapFont();
         font.setColor(Color.WHITE);
-        font.draw(batch, "Health: " + player.health, 20, 580);
+
+        font.draw(batch, "ASTEROIDS", 350, 400);
+        font.draw(batch, "Press ENTER to Start", 310, 350);
+
         batch.end();
+
+        // Start the game when ENTER is pressed
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            startGame();
+        }
     }
 
     void handleInput() {
@@ -178,17 +213,33 @@ public class AsteroidGame extends ApplicationAdapter {
         player.velocity.set(0,0);
     }
 
-    void gameOver() {
-        System.out.println("Game Over! Restarting...");
-
-        // Reset game state
+    void startGame() {
+        gameState = GameState.PLAYING;
         level = 1;
-        player.health = 3;
-        player.position.set(400, 300);
-        player.velocity.set(0, 0);
-        asteroids.clear();
+        player = new Player();
         bullets.clear();
-        levelUp(); // Restart at Level 1
+        asteroids.clear();
+        levelUp(); // Starts the first level
+    }
+
+    void gameOver() {
+        gameState = GameState.GAME_OVER;
+    }
+
+    void renderGameOverScreen() {
+        batch.begin();
+
+        BitmapFont font = new BitmapFont();
+        font.setColor(Color.WHITE);
+
+        font.draw(batch, "GAME OVER", 350, 400);
+        font.draw(batch, "Press ENTER to Restart", 310, 350);
+
+        batch.end();
+
+        if (Gdx.input.isKeyPressed(Input.Keys.ENTER)) {
+            startGame();
+        }
     }
 
     void update(float delta) {
