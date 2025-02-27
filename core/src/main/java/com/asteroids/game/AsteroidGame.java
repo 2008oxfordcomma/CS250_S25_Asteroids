@@ -15,7 +15,21 @@ import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.Array;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
 
+class HighScore {
+    String initials;
+    int score;
+
+    HighScore(String initials, int score) {
+        this.initials = initials;
+        this.score = score;
+    }
+}
 
 public class AsteroidGame extends ApplicationAdapter {
 
@@ -32,8 +46,13 @@ public class AsteroidGame extends ApplicationAdapter {
     Player player;
     Array<Bullet> bullets;
     Array<Asteroid> asteroids;
+    ArrayList<HighScore> highScores = new ArrayList<>();
+    String playerInitials = "AAA"; // default initials
+    int initialIndex = 0; // Tracking character position when entering initials
+    boolean enteringInitials = false;
     float asteroidSpawnTimer;
     int level = 1;
+    int score = 0;
 
     void updateBullets(float delta) {
         for (int i = bullets.size - 1; i >= 0; i--) {
@@ -62,6 +81,14 @@ public class AsteroidGame extends ApplicationAdapter {
                 if (asteroid.getBounds().contains(bullet.position)) {
                     // Remove bullet
                     bullets.removeIndex(i);
+
+                    if (asteroid.size == 3) {
+                        score += 20;
+                    } else if (asteroid.size == 2) {
+                        score += 50;
+                    } else if (asteroid.size == 1) {
+                        score += 100;
+                    }
 
                     // Handle asteroid
                     if (asteroid.size > 1) {
@@ -128,8 +155,35 @@ public class AsteroidGame extends ApplicationAdapter {
         bullets = new Array<>();
         asteroids = new Array<>();
 
+        loadHighScores();
         levelUp();
     }
+
+    void loadHighScores() {
+        highScores.clear();
+        File file = new File("/core/src/main/highscores.txt");
+
+        if (!file.exists()) { // no high scores yet
+            return;
+        }
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(", ");
+                if (parts.length == 2) {
+                    highScores.add(new HighScore(parts[0], Integer.parseInt(parts[1])));
+                }
+            }
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
+
+        // Sort scores (highest first)
+        highScores.sort((a, b) -> Integer.compare(b.score, a.score));
+    }
+
+
 
     void spawnInitialAsteroids() {
         for(int i = 0; i < 4; i++) {
@@ -161,9 +215,10 @@ public class AsteroidGame extends ApplicationAdapter {
             batch.begin();
             for (Bullet bullet : bullets) bullet.draw(batch);
 
-            // Draw player health
+            // Draw UI
             BitmapFont font = new BitmapFont();
             font.setColor(Color.WHITE);
+            font.draw(batch, "Score: " + score, Gdx.graphics.getWidth() / 2, 580);
             font.draw(batch, "Health: " + player.health, 20, 580);
             font.draw(batch, "Level: " + (level - 1), 700, 580);
             batch.end();
@@ -214,11 +269,12 @@ public class AsteroidGame extends ApplicationAdapter {
     }
 
     void startGame() {
-        gameState = GameState.PLAYING;
+        score = 0;
         level = 1;
         player = new Player();
         bullets.clear();
         asteroids.clear();
+        gameState = GameState.PLAYING;
         levelUp(); // Starts the first level
     }
 
