@@ -15,10 +15,7 @@ import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.Array;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 
 class HighScore {
@@ -34,7 +31,7 @@ class HighScore {
 public class AsteroidGame extends ApplicationAdapter {
 
     enum GameState {
-        TITLE, PLAYING, GAME_OVER
+        TITLE, PLAYING, GAME_OVER, LEADERBOARD
     }
 
     GameState gameState = GameState.TITLE;
@@ -46,10 +43,12 @@ public class AsteroidGame extends ApplicationAdapter {
     Player player;
     Array<Bullet> bullets;
     Array<Asteroid> asteroids;
+
     ArrayList<HighScore> highScores = new ArrayList<>();
     String playerInitials = "AAA"; // default initials
-    int initialIndex = 0; // Tracking character position when entering initials
+    int initialsIndex = 0; // Tracking character position when entering initials
     boolean enteringInitials = false;
+
     float asteroidSpawnTimer;
     int level = 1;
     int score = 0;
@@ -155,22 +154,31 @@ public class AsteroidGame extends ApplicationAdapter {
         bullets = new Array<>();
         asteroids = new Array<>();
 
-        loadHighScores();
+        loadHighScores(); // load high scores from the file
         levelUp();
+    }
+
+    void saveHighScores() {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("highscores.txt"))) {
+            for (HighScore hs : highScores) {
+                bw.write(hs.initials + "," + hs.score);
+                bw.newLine();
+            }
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
     }
 
     void loadHighScores() {
         highScores.clear();
-        File file = new File("/core/src/main/highscores.txt");
+        File file = new File("highscores.txt");
 
-        if (!file.exists()) { // no high scores yet
-            return;
-        }
+        if (!file.exists()) return; // No high scores yet
 
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = br.readLine()) != null) {
-                String[] parts = line.split(", ");
+                String[] parts = line.split(",");
                 if (parts.length == 2) {
                     highScores.add(new HighScore(parts[0], Integer.parseInt(parts[1])));
                 }
@@ -193,9 +201,8 @@ public class AsteroidGame extends ApplicationAdapter {
 
     @Override
     public void render() {
-        // Set the background color (#382b26)
         Gdx.gl.glClearColor(0.2196f, 0.1686f, 0.1490f, 1.0f);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT); // Clear the screen with the new color
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         batch.setProjectionMatrix(camera.combined);
         shapeRenderer.setProjectionMatrix(camera.combined);
@@ -203,7 +210,6 @@ public class AsteroidGame extends ApplicationAdapter {
         if (gameState == GameState.TITLE) {
             renderTitleScreen();
         } else if (gameState == GameState.PLAYING) {
-            // Normal game rendering
             handleInput();
             update(Gdx.graphics.getDeltaTime());
 
@@ -215,7 +221,6 @@ public class AsteroidGame extends ApplicationAdapter {
             batch.begin();
             for (Bullet bullet : bullets) bullet.draw(batch);
 
-            // Draw UI
             BitmapFont font = new BitmapFont();
             font.setColor(Color.WHITE);
             font.draw(batch, "Score: " + score, Gdx.graphics.getWidth() / 2, 580);
@@ -224,8 +229,11 @@ public class AsteroidGame extends ApplicationAdapter {
             batch.end();
         } else if (gameState == GameState.GAME_OVER) {
             renderGameOverScreen();
+        } else if (gameState == GameState.LEADERBOARD) {
+            renderLeaderboardScreen();
         }
     }
+
 
     void renderTitleScreen() {
         batch.begin();
@@ -269,18 +277,83 @@ public class AsteroidGame extends ApplicationAdapter {
     }
 
     void startGame() {
-        score = 0;
+        gameState = GameState.PLAYING;
         level = 1;
+        score = 0; // Reset score
         player = new Player();
         bullets.clear();
         asteroids.clear();
-        gameState = GameState.PLAYING;
-        levelUp(); // Starts the first level
+        levelUp(); // Start the first level
     }
 
     void gameOver() {
         gameState = GameState.GAME_OVER;
+        enteringInitials = true;
+        playerInitials = "AAA";
+        initialsIndex = 0;
+
+        loadHighScores();
     }
+
+    void addHighScore() {
+        highScores.add(new HighScore(playerInitials, score));
+
+        // Sort and keep only top 5
+        highScores.sort((a, b) -> Integer.compare(b.score, a.score));
+        while (highScores.size() > 5) {
+            highScores.remove(highScores.size() - 1);
+        }
+
+        saveHighScores(); // Save to file
+        loadHighScores(); // Reload from file
+
+        enteringInitials = false;
+        gameState = GameState.LEADERBOARD; // Transition to leaderboard
+    }
+
+    void renderLeaderboardScreen() {
+        batch.begin();
+
+        BitmapFont font = new BitmapFont();
+        font.setColor(Color.WHITE);
+
+        font.draw(batch, "LEADERBOARD", 330, 400);
+
+        for (int i = 0; i < Math.min(5, highScores.size()); i++) {
+            HighScore hs = highScores.get(i);
+            font.draw(batch, (i + 1) + ". " + hs.initials + " " + hs.score, 330, 370 - i * 20);
+        }
+
+        font.draw(batch, "Press ENTER to Start a New Game", 250, 200);
+
+        batch.end();
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            startGame(); // Restart the game when Enter is pressed
+        }
+    }
+
+
+
+
+    void handleInitialsInput() {
+        char[] initials = playerInitials.toCharArray();
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+            initialsIndex = (initialsIndex + 1) % 3;
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
+            initialsIndex = (initialsIndex + 2) % 3; // Move back
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+            initials[initialsIndex] = (char) ((initials[initialsIndex] - 'A' + 1) % 26 + 'A');
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+            initials[initialsIndex] = (char) ((initials[initialsIndex] - 'A' + 25) % 26 + 'A');
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            addHighScore();
+        }
+
+        playerInitials = new String(initials);
+    }
+
 
     void renderGameOverScreen() {
         batch.begin();
@@ -288,15 +361,24 @@ public class AsteroidGame extends ApplicationAdapter {
         BitmapFont font = new BitmapFont();
         font.setColor(Color.WHITE);
 
-        font.draw(batch, "GAME OVER", 350, 400);
-        font.draw(batch, "Press ENTER to Restart", 310, 350);
+        if (enteringInitials) {
+            font.draw(batch, "ENTER YOUR INITIALS", 310, 400);
+            font.draw(batch, playerInitials, 370, 350);
+            font.draw(batch, "[LEFT/RIGHT] Move, [UP/DOWN] Change Letter, [ENTER] Confirm", 150, 300);
+
+            handleInitialsInput();
+        } else {
+            font.draw(batch, "GAME OVER", 350, 400);
+            font.draw(batch, "Press ENTER to View Leaderboard", 280, 350);
+        }
 
         batch.end();
 
-        if (Gdx.input.isKeyPressed(Input.Keys.ENTER)) {
-            startGame();
+        if (!enteringInitials && Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            gameState = GameState.LEADERBOARD; // Show leaderboard instead of restarting
         }
     }
+
 
     void update(float delta) {
         player.update(delta);
@@ -309,4 +391,5 @@ public class AsteroidGame extends ApplicationAdapter {
         }
     }
 }
+
 
