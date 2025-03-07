@@ -1,4 +1,4 @@
-# 🚀 CS250 - Asteroids Remake
+# 🚀 CS250 - Asteroids
 
 ## 🎮 Project Overview
 This is my final project for **CS250: Algorithms and Problem-Solving II**, where I am recreating the classic 1979 Atari arcade game **Asteroids**. I previously attempted a version in JavaScript but was limited by time, so this project is my opportunity to develop a functional remake using **LibGDX**.
