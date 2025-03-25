@@ -14,7 +14,8 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.Array;
-import jdk.internal.org.jline.terminal.TerminalBuilder;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ public class AsteroidGame extends ApplicationAdapter {
     GameState gameState = GameState.TITLE;
 
     OrthographicCamera camera;
+    Viewport viewport;
     SpriteBatch batch;
     ShapeRenderer shapeRenderer;
 
@@ -151,7 +153,9 @@ public class AsteroidGame extends ApplicationAdapter {
     @Override
     public void create() {
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, 800, 600);
+        viewport = new FitViewport(800, 600, camera);
+        viewport.apply();
+
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
 
@@ -161,6 +165,11 @@ public class AsteroidGame extends ApplicationAdapter {
 
         loadHighScores(); // load high scores from the file
         levelUp();
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        viewport.update(width, height, true);
     }
 
     void saveHighScores() {
@@ -209,7 +218,7 @@ public class AsteroidGame extends ApplicationAdapter {
         Gdx.gl.glClearColor(0.2196f, 0.1686f, 0.1490f, 1.0f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        
+        // Fullscreen toggle
         if (Gdx.input.isKeyJustPressed(Input.Keys.F11)) {
             if (isFullscreen) {
                 Gdx.graphics.setWindowedMode(windowedWidth, windowedHeight);
@@ -221,33 +230,39 @@ public class AsteroidGame extends ApplicationAdapter {
             }
         }
 
+        camera.update();
         batch.setProjectionMatrix(camera.combined);
         shapeRenderer.setProjectionMatrix(camera.combined);
 
-        if (gameState == GameState.TITLE) {
-            renderTitleScreen();
-        } else if (gameState == GameState.PLAYING) {
-            handleInput();
-            update(Gdx.graphics.getDeltaTime());
+        switch (gameState) {
+            case TITLE:
+                renderTitleScreen();
+                break;
+            case PLAYING:
+                handleInput();
+                update(Gdx.graphics.getDeltaTime());
 
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            player.draw(shapeRenderer);
-            for (Asteroid asteroid : asteroids) asteroid.draw(shapeRenderer);
-            shapeRenderer.end();
+                shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+                player.draw(shapeRenderer);
+                for (Asteroid asteroid : asteroids) asteroid.draw(shapeRenderer);
+                shapeRenderer.end();
 
-            batch.begin();
-            for (Bullet bullet : bullets) bullet.draw(batch);
+                batch.begin();
+                for (Bullet bullet : bullets) bullet.draw(batch);
 
-            BitmapFont font = new BitmapFont();
-            font.setColor(Color.WHITE);
-            font.draw(batch, "Score: " + score, Gdx.graphics.getWidth() / 2, 580);
-            font.draw(batch, "Health: " + player.health, 20, 580);
-            font.draw(batch, "Level: " + (level - 1), 700, 580);
-            batch.end();
-        } else if (gameState == GameState.GAME_OVER) {
-            renderGameOverScreen();
-        } else if (gameState == GameState.LEADERBOARD) {
-            renderLeaderboardScreen();
+                BitmapFont font = new BitmapFont();
+                font.setColor(Color.WHITE);
+                font.draw(batch, "Score: " + score, 400, 580);
+                font.draw(batch, "Health: " + player.health, 20, 580);
+                font.draw(batch, "Level: " + (level - 1), 700, 580);
+                batch.end();
+                break;
+            case GAME_OVER:
+                renderGameOverScreen();
+                break;
+            case LEADERBOARD:
+                renderLeaderboardScreen();
+                break;
         }
     }
 
@@ -408,5 +423,4 @@ public class AsteroidGame extends ApplicationAdapter {
         }
     }
 }
-
 
