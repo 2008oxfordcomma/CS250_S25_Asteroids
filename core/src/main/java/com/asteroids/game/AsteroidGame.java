@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.Array;
+import jdk.internal.org.jline.terminal.TerminalBuilder;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -29,7 +30,6 @@ class HighScore {
 }
 
 public class AsteroidGame extends ApplicationAdapter {
-
     enum GameState {
         TITLE, PLAYING, GAME_OVER, LEADERBOARD
     }
@@ -52,6 +52,11 @@ public class AsteroidGame extends ApplicationAdapter {
     float asteroidSpawnTimer;
     int level = 1;
     int score = 0;
+
+    // 4:3 aspect ratio
+    boolean isFullscreen = false;
+    int windowedWidth = 800;
+    int windowedHeight = 600;
 
     void updateBullets(float delta) {
         for (int i = bullets.size - 1; i >= 0; i--) {
@@ -203,6 +208,18 @@ public class AsteroidGame extends ApplicationAdapter {
     public void render() {
         Gdx.gl.glClearColor(0.2196f, 0.1686f, 0.1490f, 1.0f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F11)) {
+            if (isFullscreen) {
+                Gdx.graphics.setWindowedMode(windowedWidth, windowedHeight);
+                isFullscreen = false;
+            } else {
+                Graphics.DisplayMode displayMode = Gdx.graphics.getDisplayMode();
+                Gdx.graphics.setFullscreenMode(displayMode);
+                isFullscreen = true;
+            }
+        }
 
         batch.setProjectionMatrix(camera.combined);
         shapeRenderer.setProjectionMatrix(camera.combined);
