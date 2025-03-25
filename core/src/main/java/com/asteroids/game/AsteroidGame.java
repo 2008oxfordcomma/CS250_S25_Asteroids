@@ -46,6 +46,9 @@ public class AsteroidGame extends ApplicationAdapter {
     Array<Bullet> bullets;
     Array<Asteroid> asteroids;
 
+    EnemyShip enemyShip;
+    float ufoSpawnTimer = 0;
+
     ArrayList<HighScore> highScores = new ArrayList<>();
     String playerInitials = "AAA"; // default initials
     int initialsIndex = 0; // Tracking character position when entering initials
@@ -54,6 +57,8 @@ public class AsteroidGame extends ApplicationAdapter {
     float asteroidSpawnTimer;
     int level = 1;
     int score = 0;
+
+
 
     // 4:3 aspect ratio
     boolean isFullscreen = false;
@@ -205,8 +210,6 @@ public class AsteroidGame extends ApplicationAdapter {
         highScores.sort((a, b) -> Integer.compare(b.score, a.score));
     }
 
-
-
     void spawnInitialAsteroids() {
         for(int i = 0; i < 4; i++) {
             asteroids.add(new Asteroid(new Vector2(MathUtils.random(800), MathUtils.random(600)), 3));
@@ -244,6 +247,7 @@ public class AsteroidGame extends ApplicationAdapter {
 
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                 player.draw(shapeRenderer);
+                if (enemyShip != null) enemyShip.draw(shapeRenderer);
                 for (Asteroid asteroid : asteroids) asteroid.draw(shapeRenderer);
                 shapeRenderer.end();
 
@@ -365,9 +369,6 @@ public class AsteroidGame extends ApplicationAdapter {
         }
     }
 
-
-
-
     void handleInitialsInput() {
         char[] initials = playerInitials.toCharArray();
 
@@ -411,7 +412,6 @@ public class AsteroidGame extends ApplicationAdapter {
         }
     }
 
-
     void update(float delta) {
         player.update(delta);
         updateBullets(delta);
@@ -420,6 +420,17 @@ public class AsteroidGame extends ApplicationAdapter {
         wrapAroundScreen();
         if (asteroids.size == 0) {
             levelUp();
+        }
+
+        ufoSpawnTimer += delta;
+        if (ufoSpawnTimer > 15 && enemyShip == null) {
+            enemyShip = new EnemyShip();
+            ufoSpawnTimer = 0;
+        }
+
+        if (enemyShip != null) {
+            enemyShip.update(delta, player.position, bullets);
+            if (enemyShip.isOffScreen()) enemyShip = null;
         }
     }
 }
