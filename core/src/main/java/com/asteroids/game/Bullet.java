@@ -27,13 +27,25 @@ public class Bullet {
         lifetime -= delta;
     }
 
-    public void draw(SpriteBatch batch) {
+    public void drawWhitePixel(SpriteBatch batch) {
         batch.draw(createWhitePixel(), position.x, position.y, 2, 2);
     }
 
+    public void drawRedPixel(SpriteBatch batch) {
+        batch.draw(createRedPixel(), position.x, position.y, 2, 2);
+    }
     private TextureRegion createWhitePixel() {
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(new Color(0.7216f, 0.7608f, 0.7255f, 1.0f));
+        pixmap.setColor(new Color(231/255f, 255/255f, 238/255f, 1.0f)); // #e7ffee
+        pixmap.fill();
+        Texture texture = new Texture(pixmap);
+        pixmap.dispose();
+        return new TextureRegion(texture);
+    }
+
+    private TextureRegion createRedPixel() {
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(new Color(237/255f, 160/255f, 49/255f, 1.0f)); // #eda031
         pixmap.fill();
         Texture texture = new Texture(pixmap);
         pixmap.dispose();

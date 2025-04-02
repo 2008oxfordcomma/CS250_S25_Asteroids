@@ -147,7 +147,7 @@ public class AsteroidGame extends ApplicationAdapter {
         asteroids = new Array<>();
 
         font = new BitmapFont();
-        font.setColor(Color.WHITE);
+        font.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee;
 
         loadHighScores(); // load high scores from the file
         levelUp();
@@ -233,7 +233,7 @@ public class AsteroidGame extends ApplicationAdapter {
 
     @Override
     public void render() {
-        Gdx.gl.glClearColor(0.2196f, 0.1686f, 0.1490f, 1.0f);
+        Gdx.gl.glClearColor(39/255f, 41/255f, 70/255f, 1.0f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         try {
@@ -267,9 +267,9 @@ public class AsteroidGame extends ApplicationAdapter {
                     shapeRenderer.end();
 
                     batch.begin();
-                    for (Bullet bullet : bullets) bullet.draw(batch);
+                    for (Bullet bullet : bullets) bullet.drawWhitePixel(batch);
                     if (enemyShip != null) {
-                        for (Bullet b : enemyShip.getBullets()) b.draw(batch);
+                        for (Bullet b : enemyShip.getBullets()) b.drawRedPixel(batch);
                     }
                     font.draw(batch, "Score: " + score, 400, 580);
                     font.draw(batch, "Health: " + player.health, 20, 580);
@@ -295,7 +295,7 @@ public class AsteroidGame extends ApplicationAdapter {
         batch.begin();
 
         BitmapFont font = new BitmapFont();
-        font.setColor(Color.WHITE);
+        font.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee);
 
         if (enteringInitials) {
             font.draw(batch, "ENTER YOUR INITIALS", 310, 400);
@@ -319,7 +319,7 @@ public class AsteroidGame extends ApplicationAdapter {
         batch.begin();
 
         BitmapFont font = new BitmapFont();
-        font.setColor(Color.WHITE);
+        font.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee);
 
         font.draw(batch, "LEADERBOARD", 330, 400);
 
@@ -341,7 +341,7 @@ public class AsteroidGame extends ApplicationAdapter {
         batch.begin();
 
         BitmapFont font = new BitmapFont();
-        font.setColor(Color.WHITE);
+        font.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee
 
         font.draw(batch, "ASTEROIDS", 350, 400);
         font.draw(batch, "Press ENTER to Start", 310, 350);

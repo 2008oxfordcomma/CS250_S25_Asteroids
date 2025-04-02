@@ -4,6 +4,7 @@
  */
 package com.asteroids.game;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.MathUtils;
@@ -58,7 +59,7 @@ public class EnemyShip {
     public void draw(ShapeRenderer renderer) {
         renderer.identity();
         renderer.translate(position.x, position.y, 0);
-        renderer.setColor(1, 1, 1, 1);
+        renderer.setColor(new Color(237/255f, 160/255f, 49/255f, 1.0f)); // #eda031
         renderer.rect(-10, -5, 20, 10); // Simple rectangle for the ship
     }
 

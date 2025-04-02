@@ -91,7 +91,7 @@ public class Player {
         if (shouldDraw) {
             renderer.identity();
             renderer.translate(position.x, position.y, 0);
-            renderer.setColor(0.7216f, 0.7608f, 0.7255f, 1.0f);
+            renderer.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee
             renderer.rotate(0, 0, 1, angle + 90);
             renderer.triangle(-10, 10, 0, -15, 10, 10);
         }
