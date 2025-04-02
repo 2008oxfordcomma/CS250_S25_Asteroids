@@ -49,6 +49,8 @@ public class AsteroidGame extends ApplicationAdapter {
     EnemyShip enemyShip;
     float ufoSpawnTimer = 0;
 
+    BitmapFont font;
+
     ArrayList<HighScore> highScores = new ArrayList<>();
     String playerInitials = "AAA"; // default initials
     int initialsIndex = 0; // Tracking character position when entering initials
@@ -168,6 +170,9 @@ public class AsteroidGame extends ApplicationAdapter {
         bullets = new Array<>();
         asteroids = new Array<>();
 
+        font = new BitmapFont();
+        font.setColor(Color.WHITE);
+
         loadHighScores(); // load high scores from the file
         levelUp();
     }
@@ -221,52 +226,47 @@ public class AsteroidGame extends ApplicationAdapter {
         Gdx.gl.glClearColor(0.2196f, 0.1686f, 0.1490f, 1.0f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // Fullscreen toggle
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F11)) {
-            if (isFullscreen) {
-                Gdx.graphics.setWindowedMode(windowedWidth, windowedHeight);
-                isFullscreen = false;
-            } else {
-                Graphics.DisplayMode displayMode = Gdx.graphics.getDisplayMode();
-                Gdx.graphics.setFullscreenMode(displayMode);
-                isFullscreen = true;
+        try {
+            camera.update();
+            batch.setProjectionMatrix(camera.combined);
+            shapeRenderer.setProjectionMatrix(camera.combined);
+
+            switch (gameState) {
+                case TITLE:
+                    renderTitleScreen();
+                    break;
+                case PLAYING:
+                    handleInput();
+                    update(Gdx.graphics.getDeltaTime());
+
+                    shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+                    player.draw(shapeRenderer);
+                    if (enemyShip != null) enemyShip.draw(shapeRenderer);
+                    for (Asteroid asteroid : asteroids) asteroid.draw(shapeRenderer);
+                    shapeRenderer.end();
+
+                    batch.begin();
+                    for (Bullet bullet : bullets) bullet.draw(batch);
+                    if (enemyShip != null) {
+                        for (Bullet b : enemyShip.getBullets()) b.draw(batch);
+                    }
+                    font.draw(batch, "Score: " + score, 400, 580);
+                    font.draw(batch, "Health: " + player.health, 20, 580);
+                    font.draw(batch, "Level: " + (level - 1), 700, 580);
+                    batch.end();
+                    break;
+
+                case GAME_OVER:
+                    renderGameOverScreen();
+                    break;
+
+                case LEADERBOARD:
+                    renderLeaderboardScreen();
+                    break;
             }
-        }
-
-        camera.update();
-        batch.setProjectionMatrix(camera.combined);
-        shapeRenderer.setProjectionMatrix(camera.combined);
-
-        switch (gameState) {
-            case TITLE:
-                renderTitleScreen();
-                break;
-            case PLAYING:
-                handleInput();
-                update(Gdx.graphics.getDeltaTime());
-
-                shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-                player.draw(shapeRenderer);
-                if (enemyShip != null) enemyShip.draw(shapeRenderer);
-                for (Asteroid asteroid : asteroids) asteroid.draw(shapeRenderer);
-                shapeRenderer.end();
-
-                batch.begin();
-                for (Bullet bullet : bullets) bullet.draw(batch);
-
-                BitmapFont font = new BitmapFont();
-                font.setColor(Color.WHITE);
-                font.draw(batch, "Score: " + score, 400, 580);
-                font.draw(batch, "Health: " + player.health, 20, 580);
-                font.draw(batch, "Level: " + (level - 1), 700, 580);
-                batch.end();
-                break;
-            case GAME_OVER:
-                renderGameOverScreen();
-                break;
-            case LEADERBOARD:
-                renderLeaderboardScreen();
-                break;
+        } catch (Exception e) {
+            System.err.println("[ERROR] Game crashed during render(): " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -418,9 +418,6 @@ public class AsteroidGame extends ApplicationAdapter {
         updateAsteroids(delta);
         checkCollisions();
         wrapAroundScreen();
-        if (asteroids.size == 0) {
-            levelUp();
-        }
 
         ufoSpawnTimer += delta;
         if (ufoSpawnTimer > 15 && enemyShip == null) {
@@ -429,8 +426,48 @@ public class AsteroidGame extends ApplicationAdapter {
         }
 
         if (enemyShip != null) {
-            enemyShip.update(delta, player.position, bullets);
-            if (enemyShip.isOffScreen()) enemyShip = null;
+            enemyShip.update(delta, player.position);
+
+            // Collision: UFO hits player
+            if (enemyShip.collidesWithPlayer(player.position)) {
+                player.takeDamage();
+                enemyShip = null;
+            }
+
+            // Collision: UFO bullets hit player or asteroids
+            Array<Bullet> enemyBullets = enemyShip.getBullets();
+            for (int i = enemyBullets.size - 1; i >= 0; i--) {
+                Bullet b = enemyBullets.get(i);
+
+                // Bullet hits player
+                if (player.position.dst(b.position) < 10) {
+                    player.takeDamage();
+                    enemyBullets.removeIndex(i);
+                    continue;
+                }
+
+                // Bullet hits asteroid
+                for (int j = asteroids.size - 1; j >= 0; j--) {
+                    Asteroid asteroid = asteroids.get(j);
+                    if (asteroid.getBounds().contains(b.position)) {
+                        if (asteroid.size > 1) {
+                            splitAsteroid(asteroid);
+                        }
+                        asteroids.removeIndex(j);
+                        enemyBullets.removeIndex(i);
+                        break;
+                    }
+                }
+            }
+
+            // Remove UFO if it flies off-screen
+            if (enemyShip.isOffScreen()) {
+                enemyShip = null;
+            }
+        }
+
+        if (asteroids.size == 0) {
+            levelUp();
         }
     }
 }
