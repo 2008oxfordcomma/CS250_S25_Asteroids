@@ -60,27 +60,25 @@ public class AsteroidGame extends ApplicationAdapter {
     int level = 1;
     int score = 0;
 
-
-
     // 4:3 aspect ratio
     boolean isFullscreen = false;
     int windowedWidth = 800;
     int windowedHeight = 600;
 
-    void updateBullets(float delta) {
-        for (int i = bullets.size - 1; i >= 0; i--) {
-            Bullet bullet = bullets.get(i);
-            bullet.update(delta);
-            if (bullet.lifetime <= 0) {
-                bullets.removeIndex(i); // Remove bullet if lifetime is over
-            }
-        }
-    }
+    void addHighScore() {
+        highScores.add(new HighScore(playerInitials, score));
 
-    void updateAsteroids(float delta) {
-        for(Asteroid asteroid : asteroids) {
-            asteroid.update(delta);
+        // Sort and keep only top 5
+        highScores.sort((a, b) -> Integer.compare(b.score, a.score));
+        while (highScores.size() > 5) {
+            highScores.remove(highScores.size() - 1);
         }
+
+        saveHighScores(); // Save to file
+        loadHighScores(); // Reload from file
+
+        enteringInitials = false;
+        gameState = GameState.LEADERBOARD; // Transition to leaderboard
     }
 
     void checkCollisions() {
@@ -124,39 +122,6 @@ public class AsteroidGame extends ApplicationAdapter {
         }
     }
 
-    void splitAsteroid(Asteroid parent) {
-        for (int i = 0; i < 2; i++) {
-            asteroids.add(new Asteroid(parent.position.cpy(), parent.size - 1));
-        }
-    }
-
-    void wrapAroundScreen() {
-        // Wrap player around the screen
-        Vector2 pos = player.position;
-        if (pos.x < 0) pos.x = 800;
-        if (pos.x > 800) pos.x = 0;
-        if (pos.y < 0) pos.y = 600;
-        if (pos.y > 600) pos.y = 0;
-
-        // Wrap asteroids around the screen
-        for (Asteroid asteroid : asteroids) {
-            Vector2 apos = asteroid.position;
-            if (apos.x < 0) apos.x = 800;
-            if (apos.x > 800) apos.x = 0;
-            if (apos.y < 0) apos.y = 600;
-            if (apos.y > 600) apos.y = 0;
-        }
-
-        // Wrap bullets around the screen
-        for (Bullet bullet : bullets) {
-            Vector2 bpos = bullet.position;
-            if (bpos.x < 0) bpos.x = 800;
-            if (bpos.x > 800) bpos.x = 0;
-            if (bpos.y < 0) bpos.y = 600;
-            if (bpos.y > 600) bpos.y = 0;
-        }
-    }
-
     @Override
     public void create() {
         camera = new OrthographicCamera();
@@ -177,20 +142,60 @@ public class AsteroidGame extends ApplicationAdapter {
         levelUp();
     }
 
-    @Override
-    public void resize(int width, int height) {
-        viewport.update(width, height, true);
+    void gameOver() {
+        gameState = GameState.GAME_OVER;
+        enteringInitials = true;
+        playerInitials = "AAA";
+        initialsIndex = 0;
+
+        loadHighScores();
     }
 
-    void saveHighScores() {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter("highscores.txt"))) {
-            for (HighScore hs : highScores) {
-                bw.write(hs.initials + "," + hs.score);
-                bw.newLine();
-            }
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
+    void handleInitialsInput() {
+        char[] initials = playerInitials.toCharArray();
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+            initialsIndex = (initialsIndex + 1) % 3;
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
+            initialsIndex = (initialsIndex + 2) % 3; // Move back
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+            initials[initialsIndex] = (char) ((initials[initialsIndex] - 'A' + 1) % 26 + 'A');
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+            initials[initialsIndex] = (char) ((initials[initialsIndex] - 'A' + 25) % 26 + 'A');
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            addHighScore();
         }
+
+        playerInitials = new String(initials);
+    }
+
+    void handleInput() {
+        if(Gdx.input.isKeyPressed(Input.Keys.LEFT)) player.rotate(1.5f);
+        if(Gdx.input.isKeyPressed(Input.Keys.RIGHT)) player.rotate(-1.5f);
+        if(Gdx.input.isKeyPressed(Input.Keys.UP)) player.thrust();
+        if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) player.shoot(bullets);
+
+    }
+
+    void levelUp() {
+        level++;
+        int numAsteroids = 4 + level; // More asteroids per level
+
+        for (int i = 0; i < numAsteroids; i++) {
+            Vector2 randomPos = new Vector2(MathUtils.random(800), MathUtils.random(600)); // eventually make this scale with the screen
+            int startSize = MathUtils.random(2,3); // starts with medium or large asteroids to give some variation
+
+            Asteroid newAsteroid = new Asteroid(randomPos, startSize);
+            newAsteroid.velocity.scl(1 + level * 0.1f); // slightly increase the speed
+            asteroids.add(newAsteroid);
+        }
+
+        player.position.set(400, 300);
+        player.velocity.set(0,0);
+
+        player.isInvincible = true;
+        player.invincibilityTimer = 2.0f;
+        player.invincibilityBlinkTimer = 0f;
     }
 
     void loadHighScores() {
@@ -213,12 +218,6 @@ public class AsteroidGame extends ApplicationAdapter {
 
         // Sort scores (highest first)
         highScores.sort((a, b) -> Integer.compare(b.score, a.score));
-    }
-
-    void spawnInitialAsteroids() {
-        for(int i = 0; i < 4; i++) {
-            asteroids.add(new Asteroid(new Vector2(MathUtils.random(800), MathUtils.random(600)), 3));
-        }
     }
 
     @Override
@@ -270,124 +269,6 @@ public class AsteroidGame extends ApplicationAdapter {
         }
     }
 
-
-    void renderTitleScreen() {
-        batch.begin();
-
-        BitmapFont font = new BitmapFont();
-        font.setColor(Color.WHITE);
-
-        font.draw(batch, "ASTEROIDS", 350, 400);
-        font.draw(batch, "Press ENTER to Start", 310, 350);
-
-        batch.end();
-
-        // Start the game when ENTER is pressed
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            startGame();
-        }
-    }
-
-    void handleInput() {
-        if(Gdx.input.isKeyPressed(Input.Keys.LEFT)) player.rotate(2);
-        if(Gdx.input.isKeyPressed(Input.Keys.RIGHT)) player.rotate(-2);
-        if(Gdx.input.isKeyPressed(Input.Keys.UP)) player.thrust();
-        if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) player.shoot(bullets);
-    }
-
-    void levelUp() {
-        level++;
-        int numAsteroids = 4 + level; // More asteroids per level
-
-        for (int i = 0; i < numAsteroids; i++) {
-            Vector2 randomPos = new Vector2(MathUtils.random(800), MathUtils.random(600)); // eventually make this scale with the screen
-            int startSize = MathUtils.random(2,3); // starts with medium or large asteroids to give some variation
-
-            Asteroid newAsteroid = new Asteroid(randomPos, startSize);
-            newAsteroid.velocity.scl(1 + level * 0.1f); // slightly increase the speed
-            asteroids.add(newAsteroid);
-        }
-
-        player.position.set(400, 300);
-        player.velocity.set(0,0);
-    }
-
-    void startGame() {
-        gameState = GameState.PLAYING;
-        level = 1;
-        score = 0; // Reset score
-        player = new Player();
-        bullets.clear();
-        asteroids.clear();
-        levelUp(); // Start the first level
-    }
-
-    void gameOver() {
-        gameState = GameState.GAME_OVER;
-        enteringInitials = true;
-        playerInitials = "AAA";
-        initialsIndex = 0;
-
-        loadHighScores();
-    }
-
-    void addHighScore() {
-        highScores.add(new HighScore(playerInitials, score));
-
-        // Sort and keep only top 5
-        highScores.sort((a, b) -> Integer.compare(b.score, a.score));
-        while (highScores.size() > 5) {
-            highScores.remove(highScores.size() - 1);
-        }
-
-        saveHighScores(); // Save to file
-        loadHighScores(); // Reload from file
-
-        enteringInitials = false;
-        gameState = GameState.LEADERBOARD; // Transition to leaderboard
-    }
-
-    void renderLeaderboardScreen() {
-        batch.begin();
-
-        BitmapFont font = new BitmapFont();
-        font.setColor(Color.WHITE);
-
-        font.draw(batch, "LEADERBOARD", 330, 400);
-
-        for (int i = 0; i < Math.min(5, highScores.size()); i++) {
-            HighScore hs = highScores.get(i);
-            font.draw(batch, (i + 1) + ". " + hs.initials + " " + hs.score, 330, 370 - i * 20);
-        }
-
-        font.draw(batch, "Press ENTER to Start a New Game", 250, 200);
-
-        batch.end();
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            startGame(); // Restart the game when Enter is pressed
-        }
-    }
-
-    void handleInitialsInput() {
-        char[] initials = playerInitials.toCharArray();
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
-            initialsIndex = (initialsIndex + 1) % 3;
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
-            initialsIndex = (initialsIndex + 2) % 3; // Move back
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-            initials[initialsIndex] = (char) ((initials[initialsIndex] - 'A' + 1) % 26 + 'A');
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-            initials[initialsIndex] = (char) ((initials[initialsIndex] - 'A' + 25) % 26 + 'A');
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            addHighScore();
-        }
-
-        playerInitials = new String(initials);
-    }
-
-
     void renderGameOverScreen() {
         batch.begin();
 
@@ -412,6 +293,77 @@ public class AsteroidGame extends ApplicationAdapter {
         }
     }
 
+    void renderLeaderboardScreen() {
+        batch.begin();
+
+        BitmapFont font = new BitmapFont();
+        font.setColor(Color.WHITE);
+
+        font.draw(batch, "LEADERBOARD", 330, 400);
+
+        for (int i = 0; i < Math.min(5, highScores.size()); i++) {
+            HighScore hs = highScores.get(i);
+            font.draw(batch, (i + 1) + ". " + hs.initials + " " + hs.score, 330, 370 - i * 20);
+        }
+
+        font.draw(batch, "Press ENTER to Start a New Game", 250, 200);
+
+        batch.end();
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            startGame(); // Restart the game when Enter is pressed
+        }
+    }
+
+    void renderTitleScreen() {
+        batch.begin();
+
+        BitmapFont font = new BitmapFont();
+        font.setColor(Color.WHITE);
+
+        font.draw(batch, "ASTEROIDS", 350, 400);
+        font.draw(batch, "Press ENTER to Start", 310, 350);
+
+        batch.end();
+
+        // Start the game when ENTER is pressed
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            startGame();
+        }
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        viewport.update(width, height, true);
+    }
+
+    void saveHighScores() {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("highscores.txt"))) {
+            for (HighScore hs : highScores) {
+                bw.write(hs.initials + "," + hs.score);
+                bw.newLine();
+            }
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
+    }
+
+    void splitAsteroid(Asteroid parent) {
+        for (int i = 0; i < 2; i++) {
+            asteroids.add(new Asteroid(parent.position.cpy(), parent.size - 1));
+        }
+    }
+
+    void startGame() {
+        gameState = GameState.PLAYING;
+        level = 1;
+        score = 0; // Reset score
+        player = new Player();
+        bullets.clear();
+        asteroids.clear();
+        levelUp(); // Start the first level
+    }
+
     void update(float delta) {
         player.update(delta);
         updateBullets(delta);
@@ -426,48 +378,95 @@ public class AsteroidGame extends ApplicationAdapter {
         }
 
         if (enemyShip != null) {
+            // Update the UFO
             enemyShip.update(delta, player.position);
 
-            // Collision: UFO hits player
+            // 7a) Check if UFO collides directly with player
             if (enemyShip.collidesWithPlayer(player.position)) {
                 player.takeDamage();
-                enemyShip = null;
+                enemyShip = null;  // stop referencing it
             }
 
-            // Collision: UFO bullets hit player or asteroids
-            Array<Bullet> enemyBullets = enemyShip.getBullets();
-            for (int i = enemyBullets.size - 1; i >= 0; i--) {
-                Bullet b = enemyBullets.get(i);
+            // 7b) If still alive, handle UFO bullet collisions
+            if (enemyShip != null) {
+                Array<Bullet> enemyBullets = enemyShip.getBullets();
 
-                // Bullet hits player
-                if (player.position.dst(b.position) < 10) {
-                    player.takeDamage();
-                    enemyBullets.removeIndex(i);
-                    continue;
-                }
+                for (int i = enemyBullets.size - 1; i >= 0; i--) {
+                    Bullet b = enemyBullets.get(i);
 
-                // Bullet hits asteroid
-                for (int j = asteroids.size - 1; j >= 0; j--) {
-                    Asteroid asteroid = asteroids.get(j);
-                    if (asteroid.getBounds().contains(b.position)) {
-                        if (asteroid.size > 1) {
-                            splitAsteroid(asteroid);
-                        }
-                        asteroids.removeIndex(j);
+                    // Bullet hits player?
+                    if (player.position.dst(b.position) < 10) {
+                        player.takeDamage();
                         enemyBullets.removeIndex(i);
-                        break;
+                        continue;
+                    }
+
+                    // Bullet hits asteroid?
+                    for (int j = asteroids.size - 1; j >= 0; j--) {
+                        Asteroid asteroid = asteroids.get(j);
+                        if (asteroid.getBounds().contains(b.position)) {
+                            if (asteroid.size > 1) {
+                                splitAsteroid(asteroid);
+                            }
+                            asteroids.removeIndex(j);
+                            enemyBullets.removeIndex(i);
+                            break;
+                        }
                     }
                 }
-            }
 
-            // Remove UFO if it flies off-screen
-            if (enemyShip.isOffScreen()) {
-                enemyShip = null;
+                // 7c) If it goes off-screen, remove it
+                if (enemyShip.isOffScreen()) {
+                    enemyShip = null;
+                }
             }
         }
 
         if (asteroids.size == 0) {
             levelUp();
+        }
+    }
+
+    void updateAsteroids(float delta) {
+        for(Asteroid asteroid : asteroids) {
+            asteroid.update(delta);
+        }
+    }
+
+    void updateBullets(float delta) {
+        for (int i = bullets.size - 1; i >= 0; i--) {
+            Bullet bullet = bullets.get(i);
+            bullet.update(delta);
+            if (bullet.lifetime <= 0) {
+                bullets.removeIndex(i); // Remove bullet if lifetime is over
+            }
+        }
+    }
+
+    void wrapAroundScreen() {
+        // Wrap player around the screen
+        Vector2 pos = player.position;
+        if (pos.x < 0) pos.x = 800;
+        if (pos.x > 800) pos.x = 0;
+        if (pos.y < 0) pos.y = 600;
+        if (pos.y > 600) pos.y = 0;
+
+        // Wrap asteroids around the screen
+        for (Asteroid asteroid : asteroids) {
+            Vector2 apos = asteroid.position;
+            if (apos.x < 0) apos.x = 800;
+            if (apos.x > 800) apos.x = 0;
+            if (apos.y < 0) apos.y = 600;
+            if (apos.y > 600) apos.y = 0;
+        }
+
+        // Wrap bullets around the screen
+        for (Bullet bullet : bullets) {
+            Vector2 bpos = bullet.position;
+            if (bpos.x < 0) bpos.x = 800;
+            if (bpos.x > 800) bpos.x = 0;
+            if (bpos.y < 0) bpos.y = 600;
+            if (bpos.y > 600) bpos.y = 0;
         }
     }
 }
