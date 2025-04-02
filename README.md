@@ -26,8 +26,7 @@ Since performance is a concern with **Java Swing**, I am learning **LibGDX** to 
 
 ### 📖 Resources & Credits
 -  **Color Palettes**:  
-  - [Paperback-2](https://lospec.com/palette-list/paperback-2)  
-  - [Retrotronic](https://lospec.com/palette-list/retrotronic) (by Doph)
+  - [BumbleBit](https://lospec.com/palette-list/bumblebit) (by Snowy Owl)
 -  **LibGDX Learning Materials**:  
   - [Beginner Tutorial](https://colourtann.github.io/HelloLibgdx/index.html)  
   - [LibGDX Wiki](https://libgdx.com/wiki/)  
