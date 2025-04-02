@@ -65,6 +65,8 @@ public class AsteroidGame extends ApplicationAdapter {
     int windowedWidth = 800;
     int windowedHeight = 600;
 
+    int nextExtraLifeScore = 10000;
+
     void addHighScore() {
         highScores.add(new HighScore(playerInitials, score));
 
@@ -101,6 +103,8 @@ public class AsteroidGame extends ApplicationAdapter {
                         score += 100;
                     }
 
+                    checkExtraLife();
+
                     // Handle asteroid
                     if (asteroid.size > 1) {
                         splitAsteroid(asteroid); // Split into smaller asteroids
@@ -119,6 +123,13 @@ public class AsteroidGame extends ApplicationAdapter {
 
         if (player.health <= 0) {
             gameOver();
+        }
+    }
+
+    void checkExtraLife() {
+        if (score >= nextExtraLifeScore) {
+            player.health++;
+            nextExtraLifeScore += 10000;
         }
     }
 
