@@ -226,6 +226,17 @@ public class AsteroidGame extends ApplicationAdapter {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         try {
+            // Fullscreen toggle
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F11)) {
+                if (isFullscreen) {
+                    Gdx.graphics.setWindowedMode(windowedWidth, windowedHeight);
+                    isFullscreen = false;
+                } else {
+                    Graphics.DisplayMode displayMode = Gdx.graphics.getDisplayMode();
+                    Gdx.graphics.setFullscreenMode(displayMode);
+                    isFullscreen = true;
+                }
+            }
             camera.update();
             batch.setProjectionMatrix(camera.combined);
             shapeRenderer.setProjectionMatrix(camera.combined);
