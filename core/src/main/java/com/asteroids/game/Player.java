@@ -20,6 +20,8 @@ public class Player {
     int health = 3;
     boolean isInvincible = false;
     float invincibilityTimer = 0f;
+    float rotationSpeed = 180f;
+    float invincibilityBlinkTimer = 0f; // tracks how long we've been blinking
 
     public Player() {
         position = new Vector2(400, 300);
@@ -27,8 +29,8 @@ public class Player {
         angle = 90; // starts pointing straight up
     }
 
-    public void rotate(float degrees) {
-        angle += degrees;
+    public void rotate(float direction) {
+        angle += direction * rotationSpeed * Gdx.graphics.getDeltaTime();
     }
 
     public void thrust() {
@@ -48,14 +50,17 @@ public class Player {
 
     public void update(float delta) {
         position.add(velocity.x * delta, velocity.y * delta);
-        velocity.scl(0.98f); // Friction
+        velocity.scl(0.98f);
         fireCooldown -= delta;
 
-        // reduce the invincibility timer
+        // If invincible, decrement the timer & track blink
         if (isInvincible) {
             invincibilityTimer -= delta;
+            invincibilityBlinkTimer += delta; // used for blinking
+
             if (invincibilityTimer <= 0) {
                 isInvincible = false;
+                invincibilityBlinkTimer = 0; // reset once done blinking
             }
         }
     }
@@ -66,7 +71,7 @@ public class Player {
             isInvincible = true;
             invincibilityTimer = 2.0f;
 
-            // respawn player at center if they're hit
+            // respawn player at center if hit
             if (health > 0) {
                 position.set(400, 300);
                 velocity.set(0, 0);
@@ -75,11 +80,20 @@ public class Player {
     }
 
     public void draw(ShapeRenderer renderer) {
-        renderer.identity();
-        renderer.translate(position.x, position.y, 0);
+        boolean shouldDraw = true;
+        if (isInvincible) {
+            float blinkFrequency = 5f;
+            // if the floor of blinkFrequency * total time is even, draw; else skip
+            int blinkState = (int)(invincibilityBlinkTimer * blinkFrequency);
+            shouldDraw = (blinkState % 2 == 0);
+        }
 
-        renderer.setColor(0.7216f, 0.7608f, 0.7255f, 1.0f);
-        renderer.rotate(0, 0, 1, angle + 90);
-        renderer.triangle(-10, 10, 0, -15, 10, 10);
+        if (shouldDraw) {
+            renderer.identity();
+            renderer.translate(position.x, position.y, 0);
+            renderer.setColor(0.7216f, 0.7608f, 0.7255f, 1.0f);
+            renderer.rotate(0, 0, 1, angle + 90);
+            renderer.triangle(-10, 10, 0, -15, 10, 10);
+        }
     }
 }
