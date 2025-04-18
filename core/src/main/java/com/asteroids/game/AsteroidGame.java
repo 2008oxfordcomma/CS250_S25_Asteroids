@@ -13,6 +13,12 @@ import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -32,7 +38,7 @@ class HighScore {
 
 public class AsteroidGame extends ApplicationAdapter {
     enum GameState {
-        TITLE, PLAYING, GAME_OVER, LEADERBOARD
+        TITLE, PLAYING, GAME_OVER, LEADERBOARD, SETTINGS
     }
 
     GameState gameState = GameState.TITLE;
@@ -66,6 +72,9 @@ public class AsteroidGame extends ApplicationAdapter {
     int windowedHeight = 600;
 
     int nextExtraLifeScore = 10000;
+
+    Stage settingsStage;
+    Skin uiSkin;
 
     void addHighScore() {
         highScores.add(new HighScore(playerInitials, score));
@@ -162,6 +171,57 @@ public class AsteroidGame extends ApplicationAdapter {
         loadHighScores();
     }
 
+    void initSettingsUI() {
+
+        // Use the same viewport as your main game to keep sizing consistent
+        settingsStage = new Stage(viewport);
+
+
+
+        // A basic skin: you’ll need a file like "uiskin.json" in your assets folder
+        uiSkin = new Skin(Gdx.files.internal("uiskin.json"));
+
+        // Create a table for layout
+        Table rootTable = new Table();
+        rootTable.setFillParent(true);
+        settingsStage.addActor(rootTable);
+
+        // Create your buttons
+        TextButton fullscreenButton = new TextButton("Toggle Fullscreen", uiSkin);
+        TextButton backButton = new TextButton("Back", uiSkin);
+
+        // Add logic: toggle fullscreen
+        fullscreenButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (isFullscreen) {
+                    Gdx.graphics.setWindowedMode(windowedWidth, windowedHeight);
+                    isFullscreen = false;
+                } else {
+                    Graphics.DisplayMode displayMode = Gdx.graphics.getDisplayMode();
+                    Gdx.graphics.setFullscreenMode(displayMode);
+                    isFullscreen = true;
+                }
+            }
+        });
+
+        // Add logic: go back to the Title screen
+        backButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                gameState = GameState.TITLE;
+
+                // (Optional) revert input processor:
+                Gdx.input.setInputProcessor(null);
+            }
+        });
+
+        // Lay out the buttons in the table
+        rootTable.add(fullscreenButton).pad(10f);
+        rootTable.row();
+        rootTable.add(backButton).pad(10f);
+    }
+
     void handleInitialsInput() {
         char[] initials = playerInitials.toCharArray();
 
@@ -186,6 +246,11 @@ public class AsteroidGame extends ApplicationAdapter {
         if(Gdx.input.isKeyPressed(Input.Keys.UP)) player.thrust();
         if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) player.shoot(bullets);
 
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F1)) {
+            gameState = GameState.SETTINGS;
+            initSettingsUI();               // set up the stage if not done yet
+            Gdx.input.setInputProcessor(settingsStage);
+        }
     }
 
     void levelUp() {
@@ -236,6 +301,8 @@ public class AsteroidGame extends ApplicationAdapter {
         Gdx.gl.glClearColor(39/255f, 41/255f, 70/255f, 1.0f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        System.out.println("Does uiskin.json exist? " + Gdx.files.internal("uiskin.json").exists());
+
         try {
             // Fullscreen toggle
             if (Gdx.input.isKeyJustPressed(Input.Keys.F11)) {
@@ -283,6 +350,11 @@ public class AsteroidGame extends ApplicationAdapter {
 
                 case LEADERBOARD:
                     renderLeaderboardScreen();
+                    break;
+
+                case SETTINGS:
+                    settingsStage.act(Gdx.graphics.getDeltaTime());
+                    settingsStage.draw();
                     break;
             }
         } catch (Exception e) {
@@ -334,6 +406,36 @@ public class AsteroidGame extends ApplicationAdapter {
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             startGame(); // Restart the game when Enter is pressed
+        }
+    }
+
+    void renderSettingsScreen() {
+        batch.begin();
+
+        font.draw(batch, "SETTINGS", 350, 400);
+
+        // Example setting: toggling fullscreen
+        font.draw(batch, "Press F to toggle Fullscreen", 280, 350);
+        font.draw(batch, "Press ESC to go back", 280, 320);
+
+        batch.end();
+
+        // Key handling for toggling fullscreen
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F)) {
+            // This is the same logic you used for your F11 toggle
+            if (isFullscreen) {
+                Gdx.graphics.setWindowedMode(windowedWidth, windowedHeight);
+                isFullscreen = false;
+            } else {
+                Graphics.DisplayMode displayMode = Gdx.graphics.getDisplayMode();
+                Gdx.graphics.setFullscreenMode(displayMode);
+                isFullscreen = true;
+            }
+        }
+
+        // Key handling for going back to title screen
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            gameState = GameState.TITLE;
         }
     }
 
