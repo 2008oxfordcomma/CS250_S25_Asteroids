@@ -22,6 +22,8 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.files.FileHandle;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -176,10 +178,14 @@ public class AsteroidGame extends ApplicationAdapter {
         // Use the same viewport as your main game to keep sizing consistent
         settingsStage = new Stage(viewport);
 
-
-
-        // A basic skin: you’ll need a file like "uiskin.json" in your assets folder
-        uiSkin = new Skin(Gdx.files.internal("uiskin.json"));
+        TextureAtlas atlas = new TextureAtlas(Gdx.files.internal("uiskin.atlas"));
+        try {
+            uiSkin = new Skin(atlas);
+            uiSkin.load(Gdx.files.internal("uiskin.json"));
+        } catch (Exception e) {
+            System.err.println("Skin load error " + e.getMessage());
+            e.printStackTrace();
+        }
 
         // Create a table for layout
         Table rootTable = new Table();
@@ -300,8 +306,6 @@ public class AsteroidGame extends ApplicationAdapter {
     public void render() {
         Gdx.gl.glClearColor(39/255f, 41/255f, 70/255f, 1.0f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
-        System.out.println("Does uiskin.json exist? " + Gdx.files.internal("uiskin.json").exists());
 
         try {
             // Fullscreen toggle
