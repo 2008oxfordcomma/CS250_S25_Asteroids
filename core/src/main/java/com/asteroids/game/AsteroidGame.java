@@ -5,25 +5,26 @@
 
 package com.asteroids.game;
 
-import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.*;
-import com.badlogic.gdx.graphics.*;
-import com.badlogic.gdx.graphics.g2d.*;
-import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.utils.viewport.Viewport;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.graphics.g2d.*;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.Viewport;
-import com.badlogic.gdx.utils.Json;
-import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.*;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -44,11 +45,16 @@ public class AsteroidGame extends ApplicationAdapter {
     }
 
     GameState gameState = GameState.TITLE;
+    GameState previousGameState;
 
     OrthographicCamera camera;
-    Viewport viewport;
+    OrthographicCamera screenCamera;
+
     SpriteBatch batch;
     ShapeRenderer shapeRenderer;
+
+    Viewport gameViewport;
+    Viewport barViewport;
 
     Player player;
     Array<Bullet> bullets;
@@ -146,9 +152,14 @@ public class AsteroidGame extends ApplicationAdapter {
 
     @Override
     public void create() {
+        screenCamera = new OrthographicCamera();
+        screenCamera.setToOrtho(false, Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight());
+
+        barViewport = new ScreenViewport(screenCamera);
+
         camera = new OrthographicCamera();
-        viewport = new FitViewport(800, 600, camera);
-        viewport.apply();
+        gameViewport = new FitViewport(800, 600, camera);
+        gameViewport.apply();
 
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
@@ -157,7 +168,14 @@ public class AsteroidGame extends ApplicationAdapter {
         bullets = new Array<>();
         asteroids = new Array<>();
 
-        font = new BitmapFont();
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("asteroids-display.ttf")); // from assets folder
+        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = 20;
+        parameter.minFilter = Texture.TextureFilter.Linear;
+        parameter.magFilter = Texture.TextureFilter.Linear;
+
+        font = generator.generateFont(parameter);
+        generator.dispose();
         font.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee;
 
         loadHighScores(); // load high scores from the file
@@ -169,34 +187,29 @@ public class AsteroidGame extends ApplicationAdapter {
         enteringInitials = true;
         playerInitials = "AAA";
         initialsIndex = 0;
-
         loadHighScores();
     }
 
     void initSettingsUI() {
-
-        // Use the same viewport as your main game to keep sizing consistent
-        settingsStage = new Stage(viewport);
+        settingsStage = new Stage(gameViewport); // Use the same viewport as the main game to keep sizing consistent
 
         TextureAtlas atlas = new TextureAtlas(Gdx.files.internal("uiskin.atlas"));
-        try {
-            uiSkin = new Skin(atlas);
-            uiSkin.load(Gdx.files.internal("uiskin.json"));
-        } catch (Exception e) {
-            System.err.println("Skin load error " + e.getMessage());
-            e.printStackTrace();
-        }
+
+        uiSkin = new Skin(atlas);
+        uiSkin.load(Gdx.files.internal("uiskin.json"));
 
         // Create a table for layout
         Table rootTable = new Table();
         rootTable.setFillParent(true);
         settingsStage.addActor(rootTable);
 
-        // Create your buttons
         TextButton fullscreenButton = new TextButton("Toggle Fullscreen", uiSkin);
-        TextButton backButton = new TextButton("Back", uiSkin);
+        TextButton backButton = new TextButton("Resume", uiSkin); // Changed label
+        TextButton exitToTitleButton = new TextButton("Exit to Title", uiSkin);
+        TextButton quitButton = new TextButton("Quit Game", uiSkin);
 
-        // Add logic: toggle fullscreen
+        Label pauseLabel = new Label("PAUSED", uiSkin);
+
         fullscreenButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -211,21 +224,33 @@ public class AsteroidGame extends ApplicationAdapter {
             }
         });
 
-        // Add logic: go back to the Title screen
         backButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                gameState = GameState.TITLE;
-
-                // (Optional) revert input processor:
+                gameState = previousGameState != null ? previousGameState : GameState.TITLE;
                 Gdx.input.setInputProcessor(null);
             }
         });
 
-        // Lay out the buttons in the table
-        rootTable.add(fullscreenButton).pad(10f);
-        rootTable.row();
-        rootTable.add(backButton).pad(10f);
+        exitToTitleButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                gameState = GameState.TITLE;
+                Gdx.input.setInputProcessor(null);
+            }
+        });
+
+        quitButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                Gdx.app.exit();
+            }
+        });
+        rootTable.add(pauseLabel).pad(20f).row();
+        rootTable.add(backButton).pad(10f).row();
+        rootTable.add(fullscreenButton).pad(10f).row();
+        rootTable.add(exitToTitleButton).pad(10f).row();
+        rootTable.add(quitButton).pad(10f).row();
     }
 
     void handleInitialsInput() {
@@ -252,7 +277,8 @@ public class AsteroidGame extends ApplicationAdapter {
         if(Gdx.input.isKeyPressed(Input.Keys.UP)) player.thrust();
         if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) player.shoot(bullets);
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F1)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            previousGameState = gameState;
             gameState = GameState.SETTINGS;
             initSettingsUI();               // set up the stage if not done yet
             Gdx.input.setInputProcessor(settingsStage);
@@ -304,11 +330,11 @@ public class AsteroidGame extends ApplicationAdapter {
 
     @Override
     public void render() {
-        Gdx.gl.glClearColor(39/255f, 41/255f, 70/255f, 1.0f);
+        Gdx.gl.glClearColor(39 / 255f, 41 / 255f, 70 / 255f, 1.0f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         try {
-            // Fullscreen toggle
+            // Handle fullscreen toggle
             if (Gdx.input.isKeyJustPressed(Input.Keys.F11)) {
                 if (isFullscreen) {
                     Gdx.graphics.setWindowedMode(windowedWidth, windowedHeight);
@@ -319,6 +345,34 @@ public class AsteroidGame extends ApplicationAdapter {
                     isFullscreen = true;
                 }
             }
+
+            barViewport.apply();
+            screenCamera.update();
+            shapeRenderer.setProjectionMatrix(screenCamera.combined);
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.identity();
+            shapeRenderer.setColor(29 / 255f, 31 / 255f, 60 / 255f, 1.0f); // Adjust color as needed
+
+            int screenWidth = Gdx.graphics.getWidth();
+            int screenHeight = Gdx.graphics.getHeight();
+            int gameX = gameViewport.getScreenX();
+            int gameY = gameViewport.getScreenY();
+            int gameWidth = gameViewport.getScreenWidth();
+            int gameHeight = gameViewport.getScreenHeight();
+
+            // Left bar
+            shapeRenderer.rect(0, 0, gameX, screenHeight);
+            // Right bar
+            shapeRenderer.rect(gameX + gameWidth, 0, screenWidth - (gameX + gameWidth), screenHeight);
+            // Bottom bar
+            shapeRenderer.rect(gameX, 0, gameWidth, gameY);
+            // Top bar
+            shapeRenderer.rect(gameX, gameY + gameHeight, gameWidth, screenHeight - (gameY + gameHeight));
+
+            shapeRenderer.end();
+
+
+            gameViewport.apply();
             camera.update();
             batch.setProjectionMatrix(camera.combined);
             shapeRenderer.setProjectionMatrix(camera.combined);
@@ -327,6 +381,7 @@ public class AsteroidGame extends ApplicationAdapter {
                 case TITLE:
                     renderTitleScreen();
                     break;
+
                 case PLAYING:
                     handleInput();
                     update(Gdx.graphics.getDeltaTime());
@@ -361,16 +416,17 @@ public class AsteroidGame extends ApplicationAdapter {
                     settingsStage.draw();
                     break;
             }
+
         } catch (Exception e) {
             System.err.println("[ERROR] Game crashed during render(): " + e.getMessage());
             e.printStackTrace();
         }
     }
 
+
     void renderGameOverScreen() {
         batch.begin();
 
-        BitmapFont font = new BitmapFont();
         font.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee);
 
         if (enteringInitials) {
@@ -394,7 +450,6 @@ public class AsteroidGame extends ApplicationAdapter {
     void renderLeaderboardScreen() {
         batch.begin();
 
-        BitmapFont font = new BitmapFont();
         font.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee);
 
         font.draw(batch, "LEADERBOARD", 330, 400);
@@ -413,40 +468,9 @@ public class AsteroidGame extends ApplicationAdapter {
         }
     }
 
-    void renderSettingsScreen() {
-        batch.begin();
-
-        font.draw(batch, "SETTINGS", 350, 400);
-
-        // Example setting: toggling fullscreen
-        font.draw(batch, "Press F to toggle Fullscreen", 280, 350);
-        font.draw(batch, "Press ESC to go back", 280, 320);
-
-        batch.end();
-
-        // Key handling for toggling fullscreen
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F)) {
-            // This is the same logic you used for your F11 toggle
-            if (isFullscreen) {
-                Gdx.graphics.setWindowedMode(windowedWidth, windowedHeight);
-                isFullscreen = false;
-            } else {
-                Graphics.DisplayMode displayMode = Gdx.graphics.getDisplayMode();
-                Gdx.graphics.setFullscreenMode(displayMode);
-                isFullscreen = true;
-            }
-        }
-
-        // Key handling for going back to title screen
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            gameState = GameState.TITLE;
-        }
-    }
-
     void renderTitleScreen() {
         batch.begin();
 
-        BitmapFont font = new BitmapFont();
         font.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee
 
         font.draw(batch, "ASTEROIDS", 350, 400);
@@ -462,7 +486,8 @@ public class AsteroidGame extends ApplicationAdapter {
 
     @Override
     public void resize(int width, int height) {
-        viewport.update(width, height, true);
+        gameViewport.update(width, height, true);
+        barViewport.update(width, height, true);
     }
 
     void saveHighScores() {
@@ -506,16 +531,15 @@ public class AsteroidGame extends ApplicationAdapter {
         }
 
         if (enemyShip != null) {
-            // Update the UFO
             enemyShip.update(delta, player.position);
 
-            // 7a) Check if UFO collides directly with player
+            // Check if UFO collides directly with player
             if (enemyShip.collidesWithPlayer(player.position)) {
                 player.takeDamage();
                 enemyShip = null;  // stop referencing it
             }
 
-            // 7b) If still alive, handle UFO bullet collisions
+            // If still alive, handle UFO bullet collisions
             if (enemyShip != null) {
                 Array<Bullet> enemyBullets = enemyShip.getBullets();
 
