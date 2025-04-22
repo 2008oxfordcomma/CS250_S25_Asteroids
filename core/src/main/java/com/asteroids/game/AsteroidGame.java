@@ -59,11 +59,13 @@ public class AsteroidGame extends ApplicationAdapter {
     Player player;
     Array<Bullet> bullets;
     Array<Asteroid> asteroids;
+    Array<Explosion> explosions = new Array<>();
 
     EnemyShip enemyShip;
     float ufoSpawnTimer = 0;
 
     BitmapFont font;
+    GlyphLayout layout = new GlyphLayout();
 
     ArrayList<HighScore> highScores = new ArrayList<>();
     String playerInitials = "AAA"; // default initials
@@ -109,6 +111,8 @@ public class AsteroidGame extends ApplicationAdapter {
 
                 // Check for collision between bullet and asteroid
                 if (asteroid.getBounds().contains(bullet.position)) {
+                    System.out.println("Explosion triggered at: " + bullet.position);
+                    explosions.add(new Explosion(bullet.position.cpy()));
                     // Remove bullet
                     bullets.removeIndex(i);
 
@@ -126,6 +130,7 @@ public class AsteroidGame extends ApplicationAdapter {
                     if (asteroid.size > 1) {
                         splitAsteroid(asteroid); // Split into smaller asteroids
                     }
+
                     asteroids.removeIndex(j); // Remove the original asteroid
                     break; // Exit loop since the bullet is destroyed
                 }
@@ -390,6 +395,7 @@ public class AsteroidGame extends ApplicationAdapter {
                     player.draw(shapeRenderer);
                     if (enemyShip != null) enemyShip.draw(shapeRenderer);
                     for (Asteroid asteroid : asteroids) asteroid.draw(shapeRenderer);
+                    for (Explosion explosion : explosions) explosion.draw(shapeRenderer);
                     shapeRenderer.end();
 
                     batch.begin();
@@ -397,7 +403,15 @@ public class AsteroidGame extends ApplicationAdapter {
                     if (enemyShip != null) {
                         for (Bullet b : enemyShip.getBullets()) b.drawRedPixel(batch);
                     }
-                    font.draw(batch, "Score: " + score, 400, 580);
+
+                    String scoreText = "Score: " + score;
+                    layout.setText(font, scoreText);
+
+                    float x = (gameViewport.getWorldWidth() - layout.width) / 2f;
+                    float y = gameViewport.getWorldHeight() - 20;
+
+                    font.draw(batch, layout, x, y);
+
                     font.draw(batch, "Health: " + player.health, 20, 580);
                     font.draw(batch, "Level: " + (level - 1), 700, 580);
                     batch.end();
@@ -567,7 +581,7 @@ public class AsteroidGame extends ApplicationAdapter {
                     }
                 }
 
-                // 7c) If it goes off-screen, remove it
+                // If it goes off-screen, remove it
                 if (enemyShip.isOffScreen()) {
                     enemyShip = null;
                 }
@@ -576,6 +590,14 @@ public class AsteroidGame extends ApplicationAdapter {
 
         if (asteroids.size == 0) {
             levelUp();
+        }
+
+        for (int i = explosions.size - 1; i >= 0; i--) {
+            Explosion e = explosions.get(i);
+            e.update(delta);
+            if (e.isFinished()) {
+                explosions.removeIndex(i);
+            }
         }
     }
 
