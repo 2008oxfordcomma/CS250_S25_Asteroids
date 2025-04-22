@@ -40,13 +40,11 @@ public class Player {
 
     public void shoot(Array<Bullet> bullets) {
         if(fireCooldown <= 0) {
-            float tipOffset = 15f;
-            Vector2 direction = new Vector2(MathUtils.cosDeg(angle), MathUtils.sinDeg(angle));
-            Vector2 bulletPos = new Vector2(position).add(direction.scl(tipOffset));
-            Vector2 bulletVel = new Vector2(direction).scl(40); // speed
-
-            bullets.add(new Bullet(bulletPos, bulletVel));
-            fireCooldown = .3f;
+            bullets.add(new Bullet(
+                position.cpy(),
+                new Vector2(MathUtils.cosDeg(angle) * 500, MathUtils.sinDeg(angle) * 500)
+            ));
+            fireCooldown = 0.2f;
         }
     }
 
