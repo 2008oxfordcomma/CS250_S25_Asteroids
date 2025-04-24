@@ -59,7 +59,7 @@ public class AsteroidGame extends ApplicationAdapter {
     Player player;
     Array<Bullet> bullets;
     Array<Asteroid> asteroids;
-    Array<Explosion> explosions = new Array<>();
+    // Array<Explosion> explosions = new Array<>();
 
     EnemyShip enemyShip;
     float ufoSpawnTimer = 0;
@@ -111,8 +111,8 @@ public class AsteroidGame extends ApplicationAdapter {
 
                 // Check for collision between bullet and asteroid
                 if (asteroid.getBounds().contains(bullet.position)) {
-                    System.out.println("Explosion triggered at: " + bullet.position);
-                    explosions.add(new Explosion(bullet.position.cpy()));
+                    // System.out.println("Explosion triggered at: " + bullet.position);
+                    // explosions.add(new Explosion(bullet.position.cpy()));
                     // Remove bullet
                     bullets.removeIndex(i);
 
@@ -395,7 +395,7 @@ public class AsteroidGame extends ApplicationAdapter {
                     player.draw(shapeRenderer);
                     if (enemyShip != null) enemyShip.draw(shapeRenderer);
                     for (Asteroid asteroid : asteroids) asteroid.draw(shapeRenderer);
-                    for (Explosion explosion : explosions) explosion.draw(shapeRenderer);
+                    // for (Explosion explosion : explosions) explosion.draw(shapeRenderer);
                     shapeRenderer.end();
 
                     batch.begin();
@@ -592,13 +592,13 @@ public class AsteroidGame extends ApplicationAdapter {
             levelUp();
         }
 
-        for (int i = explosions.size - 1; i >= 0; i--) {
-            Explosion e = explosions.get(i);
-            e.update(delta);
-            if (e.isFinished()) {
-                explosions.removeIndex(i);
-            }
-        }
+//        for (int i = explosions.size - 1; i >= 0; i--) {
+//            Explosion e = explosions.get(i);
+//            e.update(delta);
+//            if (e.isFinished()) {
+//                explosions.removeIndex(i);
+//            }
+//        }
     }
 
     void updateAsteroids(float delta) {
