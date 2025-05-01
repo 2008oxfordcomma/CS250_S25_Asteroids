@@ -5,6 +5,7 @@
 
 package com.asteroids.game;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.MathUtils;
@@ -21,6 +22,9 @@ public class Asteroid {
     float noiseOffset;
     int vertexCount = 12;
     float[] verticies;
+
+    Color colorDark = new Color(231 / 255f, 255 / 255f, 238 / 255f, 1.0f);
+    Color colorLight = new Color(0.1f, 0.1f, 0.1f, 1.0f);
 
 
     public Asteroid(Vector2 pos, int size) {
@@ -64,12 +68,12 @@ public class Asteroid {
         rotation += rotationSpeed * delta;
     }
 
-    public void draw(ShapeRenderer renderer) {
+    public void draw(ShapeRenderer renderer, boolean darkMode) {
         renderer.identity();
         renderer.translate(position.x, position.y, 0);
         renderer.rotate(0, 0, 1, rotation);
 
-        renderer.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee
+        renderer.setColor(darkMode ? colorDark : colorLight);
 
         renderer.polygon(verticies);
     }

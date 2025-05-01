@@ -67,6 +67,16 @@ public class AsteroidGame extends ApplicationAdapter {
     BitmapFont font;
     GlyphLayout layout = new GlyphLayout();
 
+    boolean darkMode = true;
+    Color currentBackground = new Color(39/255f, 41/255f, 70/255f, 1f);
+    Color targetBackground = new Color(39/255f, 41/255f, 70/255f, 1f);
+    Color darkColor = new Color(39/255f, 41/255f, 70/255f, 1f);
+    Color lightColor = new Color(254/255f, 245/255f, 235/255f, 1f);
+    Color fontColorDark = new Color(231 / 255f, 255 / 255f, 238 / 255f, 1.0f);
+    Color fontColorLight = new Color(0.1f, 0.1f, 0.1f, 1.0f);
+
+    Preferences prefs;
+
     ArrayList<HighScore> highScores = new ArrayList<>();
     String playerInitials = "AAA"; // default initials
     int initialsIndex = 0; // Tracking character position when entering initials
@@ -181,10 +191,16 @@ public class AsteroidGame extends ApplicationAdapter {
 
         font = generator.generateFont(parameter);
         generator.dispose();
-        font.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee;
+        font.setColor(darkMode ? fontColorLight : fontColorDark);
 
         loadHighScores(); // load high scores from the file
         levelUp();
+
+        prefs = Gdx.app.getPreferences("AsteoidSettings");
+
+        darkMode = prefs.getBoolean("darkMode", true);
+        currentBackground.set(darkMode ? darkColor : lightColor);
+        targetBackground.set(darkMode ? darkColor : lightColor);
     }
 
     void gameOver() {
@@ -208,6 +224,7 @@ public class AsteroidGame extends ApplicationAdapter {
         rootTable.setFillParent(true);
         settingsStage.addActor(rootTable);
 
+        TextButton modeButton = new TextButton("Toggle Light/Dark Mode", uiSkin);
         TextButton fullscreenButton = new TextButton("Toggle Fullscreen", uiSkin);
         TextButton backButton = new TextButton("Resume", uiSkin); // Changed label
         TextButton exitToTitleButton = new TextButton("Exit to Title", uiSkin);
@@ -226,6 +243,13 @@ public class AsteroidGame extends ApplicationAdapter {
                     Gdx.graphics.setFullscreenMode(displayMode);
                     isFullscreen = true;
                 }
+            }
+        });
+
+        modeButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                toggleDarkMode();
             }
         });
 
@@ -253,6 +277,7 @@ public class AsteroidGame extends ApplicationAdapter {
         });
         rootTable.add(pauseLabel).pad(20f).row();
         rootTable.add(backButton).pad(10f).row();
+        rootTable.add(modeButton).pad(10f).row();
         rootTable.add(fullscreenButton).pad(10f).row();
         rootTable.add(exitToTitleButton).pad(10f).row();
         rootTable.add(quitButton).pad(10f).row();
@@ -281,6 +306,9 @@ public class AsteroidGame extends ApplicationAdapter {
         if(Gdx.input.isKeyPressed(Input.Keys.RIGHT)) player.rotate(-1.5f);
         if(Gdx.input.isKeyPressed(Input.Keys.UP)) player.thrust();
         if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) player.shoot(bullets);
+        if(Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+            darkMode = !darkMode;
+        }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             previousGameState = gameState;
@@ -335,7 +363,8 @@ public class AsteroidGame extends ApplicationAdapter {
 
     @Override
     public void render() {
-        Gdx.gl.glClearColor(39 / 255f, 41 / 255f, 70 / 255f, 1.0f);
+        currentBackground.lerp(targetBackground, Gdx.graphics.getDeltaTime() * 5f);
+        Gdx.gl.glClearColor(currentBackground.r, currentBackground.g, currentBackground.b, 1.0f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         try {
@@ -356,8 +385,7 @@ public class AsteroidGame extends ApplicationAdapter {
             shapeRenderer.setProjectionMatrix(screenCamera.combined);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             shapeRenderer.identity();
-            shapeRenderer.setColor(29 / 255f, 31 / 255f, 60 / 255f, 1.0f); // Adjust color as needed
-
+            shapeRenderer.setColor(currentBackground);
             int screenWidth = Gdx.graphics.getWidth();
             int screenHeight = Gdx.graphics.getHeight();
             int gameX = gameViewport.getScreenX();
@@ -392,26 +420,27 @@ public class AsteroidGame extends ApplicationAdapter {
                     update(Gdx.graphics.getDeltaTime());
 
                     shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-                    player.draw(shapeRenderer);
+                    player.draw(shapeRenderer, darkMode);
                     if (enemyShip != null) enemyShip.draw(shapeRenderer);
-                    for (Asteroid asteroid : asteroids) asteroid.draw(shapeRenderer);
+                    for (Asteroid asteroid : asteroids) asteroid.draw(shapeRenderer, darkMode);
                     // for (Explosion explosion : explosions) explosion.draw(shapeRenderer);
                     shapeRenderer.end();
 
-                    batch.begin();
-                    for (Bullet bullet : bullets) bullet.drawWhitePixel(batch);
-                    if (enemyShip != null) {
-                        for (Bullet b : enemyShip.getBullets()) b.drawRedPixel(batch);
-                    }
+                    font.setColor(darkMode ? fontColorDark : fontColorLight);
 
-                    String scoreText = "Score: " + score;
-                    layout.setText(font, scoreText);
+                    batch.begin();
+                    for (Bullet bullet : bullets) bullet.drawWhitePixel(batch, darkMode);
+                    if (enemyShip != null) {
+                        for (Bullet b : enemyShip.getBullets()) b.drawRedPixel(batch, darkMode);
+                    }
 
                     float x = (gameViewport.getWorldWidth() - layout.width) / 2f;
                     float y = gameViewport.getWorldHeight() - 20;
 
                     font.draw(batch, layout, x, y);
 
+                    String scoreText = "Score: " + score;
+                    layout.setText(font, scoreText);
                     font.draw(batch, "Health: " + player.health, 20, 580);
                     font.draw(batch, "Level: " + (level - 1), 700, 580);
                     batch.end();
@@ -441,12 +470,17 @@ public class AsteroidGame extends ApplicationAdapter {
     void renderGameOverScreen() {
         batch.begin();
 
-        font.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee);
+        font.setColor(darkMode ? fontColorDark : fontColorLight);
 
         if (enteringInitials) {
-            font.draw(batch, "ENTER YOUR INITIALS", 310, 400);
-            font.draw(batch, playerInitials, 370, 350);
-            font.draw(batch, "[LEFT/RIGHT] Move, [UP/DOWN] Change Letter, [ENTER] Confirm", 150, 300);
+            layout.setText(font, "ENTER YOUR INITIALS");
+            font.draw(batch, layout, (gameViewport.getWorldWidth() - layout.width) / 2f, 400);
+
+            layout.setText(font, playerInitials);
+            font.draw(batch, layout, (gameViewport.getWorldWidth() - layout.width) / 2f, 350);
+
+            layout.setText(font, "[LEFT/RIGHT] Move, [UP/DOWN] Change Letter, [ENTER] Confirm");
+            font.draw(batch, layout, (gameViewport.getWorldWidth() - layout.width) / 2f, 300);
 
             handleInitialsInput();
         } else {
@@ -464,7 +498,7 @@ public class AsteroidGame extends ApplicationAdapter {
     void renderLeaderboardScreen() {
         batch.begin();
 
-        font.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee);
+        font.setColor(darkMode ? fontColorDark : fontColorLight);
 
         font.draw(batch, "LEADERBOARD", 330, 400);
 
@@ -485,10 +519,12 @@ public class AsteroidGame extends ApplicationAdapter {
     void renderTitleScreen() {
         batch.begin();
 
-        font.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee
+        font.setColor(darkMode ? fontColorDark : fontColorLight);
+        layout.setText(font, "ASTEROIDS");
+        font.draw(batch, layout, (gameViewport.getWorldWidth() - layout.width) / 2f, 400);
 
-        font.draw(batch, "ASTEROIDS", 350, 400);
-        font.draw(batch, "Press ENTER to Start", 310, 350);
+        layout.setText(font, "Press [ENTER] to Start");
+        font.draw(batch, layout, (gameViewport.getWorldWidth() - layout.width) / 2f, 350);
 
         batch.end();
 
@@ -642,6 +678,13 @@ public class AsteroidGame extends ApplicationAdapter {
             if (bpos.y < 0) bpos.y = 600;
             if (bpos.y > 600) bpos.y = 0;
         }
+    }
+
+    void toggleDarkMode() {
+        darkMode = !darkMode;
+        targetBackground.set(darkMode ? darkColor : lightColor);
+        prefs.putBoolean("darkMode", darkMode);
+        prefs.flush();
     }
 }
 

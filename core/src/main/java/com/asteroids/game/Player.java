@@ -6,6 +6,7 @@
 package com.asteroids.game;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -22,7 +23,8 @@ public class Player {
     float invincibilityTimer = 0f;
     float rotationSpeed = 180f;
     float invincibilityBlinkTimer = 0f; // tracks how long we've been blinking
-
+    Color colorDark = new Color(231 / 255f, 255 / 255f, 238 / 255f, 1.0f);
+    Color colorLight = new Color(0.1f, 0.1f, 0.1f, 1.0f);
     public Player() {
         position = new Vector2(400, 300);
         velocity = new Vector2();
@@ -79,7 +81,7 @@ public class Player {
         }
     }
 
-    public void draw(ShapeRenderer renderer) {
+    public void draw(ShapeRenderer renderer, boolean darkMode) {
         boolean shouldDraw = true;
         if (isInvincible) {
             float blinkFrequency = 5f;
@@ -91,7 +93,7 @@ public class Player {
         if (shouldDraw) {
             renderer.identity();
             renderer.translate(position.x, position.y, 0);
-            renderer.setColor(231/255f, 255/255f, 238/255f, 1.0f); // #e7ffee
+            renderer.setColor(darkMode ? colorDark : colorLight);
             renderer.rotate(0, 0, 1, angle + 90);
             renderer.triangle(-10, 10, 0, -15, 10, 10);
         }
