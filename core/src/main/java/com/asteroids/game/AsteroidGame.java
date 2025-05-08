@@ -307,7 +307,7 @@ public class AsteroidGame extends ApplicationAdapter {
                 Gdx.input.setInputProcessor(null);
             }
         });
-        
+
         rootTable.add(controlsButton).pad(10f).row();
     }
 
