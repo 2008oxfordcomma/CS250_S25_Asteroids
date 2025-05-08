@@ -41,7 +41,7 @@ class HighScore {
 
 public class AsteroidGame extends ApplicationAdapter {
     enum GameState {
-        TITLE, PLAYING, GAME_OVER, LEADERBOARD, SETTINGS
+        TITLE, CONTROLS, PLAYING, GAME_OVER, LEADERBOARD, SETTINGS
     }
 
     GameState gameState = GameState.TITLE;
@@ -94,6 +94,7 @@ public class AsteroidGame extends ApplicationAdapter {
     int nextExtraLifeScore = 10000;
 
     Stage settingsStage;
+    Stage titleStage;
     Skin uiSkin;
 
     void addHighScore() {
@@ -119,9 +120,8 @@ public class AsteroidGame extends ApplicationAdapter {
             for (int j = asteroids.size - 1; j >= 0; j--) {
                 Asteroid asteroid = asteroids.get(j);
 
-                //Check for collision between bullet and asteroid
+                // Check for collision between bullet and asteroid
                 if (asteroid.getBounds().contains(bullet.position)) {
-
                     bullets.removeIndex(i);
 
                     if (asteroid.size == 3) {
@@ -193,6 +193,9 @@ public class AsteroidGame extends ApplicationAdapter {
 
         loadHighScores(); // load high scores from the file
         levelUp();
+
+        initTitleUI();
+        Gdx.input.setInputProcessor(titleStage);
 
         prefs = Gdx.app.getPreferences("AsteoidSettings");
 
@@ -283,6 +286,29 @@ public class AsteroidGame extends ApplicationAdapter {
         rootTable.add(fullscreenButton).pad(10f).row();
         rootTable.add(exitToTitleButton).pad(10f).row();
         rootTable.add(quitButton).pad(10f).row();
+    }
+
+    void initTitleUI() {
+        titleStage = new Stage(gameViewport);
+
+        TextureAtlas atlas = new TextureAtlas(Gdx.files.internal("uiskin.atlas"));
+        uiSkin = new Skin(atlas);
+        uiSkin.load(Gdx.files.internal("uiskin.json"));
+
+        Table rootTable = new Table();
+        rootTable.setFillParent(true);
+        titleStage.addActor(rootTable);
+
+        TextButton controlsButton = new TextButton("View Controls", uiSkin);
+        controlsButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                gameState = GameState.CONTROLS;
+                Gdx.input.setInputProcessor(null);
+            }
+        });
+        
+        rootTable.add(controlsButton).pad(10f).row();
     }
 
     void handleInitialsInput() {
@@ -383,13 +409,15 @@ public class AsteroidGame extends ApplicationAdapter {
             }
 
             if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-                if (gameState != GameState.SETTINGS) {
+                if (gameState == GameState.CONTROLS) {
+                    gameState = GameState.TITLE;
+                    Gdx.input.setInputProcessor(titleStage);
+                } else if (gameState != GameState.SETTINGS) {
                     previousGameState = gameState;
                     gameState = GameState.SETTINGS;
                     initSettingsUI();
                     Gdx.input.setInputProcessor(settingsStage);
                 } else {
-                    // ESCAPE exits the pause/settings menu
                     gameState = previousGameState != null ? previousGameState : GameState.TITLE;
                     Gdx.input.setInputProcessor(null);
                 }
@@ -432,7 +460,9 @@ public class AsteroidGame extends ApplicationAdapter {
                 case TITLE:
                     renderTitleScreen();
                     break;
-
+                case CONTROLS:
+                    renderControlsScreen();
+                    break;
                 case PLAYING:
                     handleInput();
                     update(Gdx.graphics.getDeltaTime());
@@ -441,7 +471,6 @@ public class AsteroidGame extends ApplicationAdapter {
                     player.draw(shapeRenderer, darkMode);
                     if (enemyShip != null) enemyShip.draw(shapeRenderer);
                     for (Asteroid asteroid : asteroids) asteroid.draw(shapeRenderer, darkMode);
-                    // for (Explosion explosion : explosions) explosion.draw(shapeRenderer);
                     shapeRenderer.end();
 
                     font.setColor(darkMode ? fontColorDark : fontColorLight);
@@ -484,6 +513,23 @@ public class AsteroidGame extends ApplicationAdapter {
         }
     }
 
+    void renderControlsScreen() {
+        batch.begin();
+        font.setColor(darkMode ? fontColorDark : fontColorLight);
+
+        layout.setText(font, "CONTROLS");
+        font.draw(batch, layout, (gameViewport.getWorldWidth() - layout.width) / 2f, 550);
+
+        font.draw(batch, "UP ARROW: Thrust", 200, 450);
+        font.draw(batch, "LEFT ARROW: Rotate Left", 200, 420);
+        font.draw(batch, "RIGHT ARROW: Rotate Right", 200, 390);
+        font.draw(batch, "SPACE: Shoot", 200, 360);
+        font.draw(batch, "ESC: Pause Menu or Back", 200, 330);
+        font.draw(batch, "M: Toggle Light/Dark Mode", 200, 300);
+
+        font.draw(batch, "Press ESC to return to Title", 200, 240);
+        batch.end();
+    }
 
     void renderGameOverScreen() {
         batch.begin();
@@ -550,6 +596,9 @@ public class AsteroidGame extends ApplicationAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             startGame();
         }
+
+        titleStage.act(Gdx.graphics.getDeltaTime());
+        titleStage.draw();
     }
 
     @Override
@@ -645,6 +694,7 @@ public class AsteroidGame extends ApplicationAdapter {
         if (asteroids.size == 0) {
             levelUp();
         }
+
     }
 
     void updateAsteroids(float delta) {
@@ -694,8 +744,9 @@ public class AsteroidGame extends ApplicationAdapter {
         darkMode = !darkMode;
         targetBackground.set(darkMode ? darkColor : lightColor);
         font.setColor(darkMode ? fontColorDark : fontColorLight);
-
         layout.setText(font, layout.toString());
+
+        Bullet.recreatePixels(darkMode); // update bullet color
 
         prefs.putBoolean("darkMode", darkMode);
         prefs.flush();
