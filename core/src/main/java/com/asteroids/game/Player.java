@@ -23,8 +23,10 @@ public class Player {
     float invincibilityTimer = 0f;
     float rotationSpeed = 180f;
     float invincibilityBlinkTimer = 0f; // tracks how long we've been blinking
+
     Color colorDark = new Color(231 / 255f, 255 / 255f, 238 / 255f, 1.0f);
     Color colorLight = new Color(0.1f, 0.1f, 0.1f, 1.0f);
+
     public Player() {
         position = new Vector2(400, 300);
         velocity = new Vector2();
@@ -42,11 +44,15 @@ public class Player {
 
     public void shoot(Array<Bullet> bullets) {
         if(fireCooldown <= 0) {
+            float tipOffset = 15f; // Distance from center to tip of the ship
+            Vector2 direction = new Vector2(MathUtils.cosDeg(angle), MathUtils.sinDeg(angle));
+            Vector2 tip = new Vector2(position).add(direction.scl(tipOffset));
+
             bullets.add(new Bullet(
-                position.cpy(),
-                new Vector2(MathUtils.cosDeg(angle) * 500, MathUtils.sinDeg(angle) * 500)
+                tip,
+                direction.scl(30) // Velocity
             ));
-            fireCooldown = 0.2f;
+            fireCooldown = 0.4f;
         }
     }
 
