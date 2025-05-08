@@ -21,7 +21,9 @@ public class Bullet {
     static boolean initialized = false;
     Color darkRedColor = new Color(237/255f, 160/255f, 49/255f, 1.0f);
     Color darkerRedColor = new Color (0.6f, 0.1f, 0.1f, 1f);
-    Color lightColor = new Color(231/255f, 255/255f, 238/255f, 1.0f);
+
+    Color colorDark = new Color(231 / 255f, 255 / 255f, 238 / 255f, 1.0f);
+    Color colorLight = new Color(0.1f, 0.1f, 0.1f, 1.0f);
 
     public Bullet(Vector2 pos, Vector2 vel) {
         position = pos;
@@ -35,7 +37,7 @@ public class Bullet {
 
     private void createPixels() {
         Pixmap pixmapWhite = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmapWhite.setColor(lightColor);
+        pixmapWhite.setColor(colorLight);
         pixmapWhite.fill();
         whitePixel = new Texture(pixmapWhite);
         pixmapWhite.dispose();
@@ -53,15 +55,15 @@ public class Bullet {
     }
 
     public void drawWhitePixel(SpriteBatch batch, boolean darkMode) {
-        batch.setColor(darkMode ? lightColor : darkRedColor);
+        batch.setColor(darkMode ? colorLight : colorDark);
         batch.draw(whitePixel, position.x, position.y, 2, 2);
-        batch.setColor(lightColor);
+        batch.setColor(colorLight);
     }
 
     public void drawRedPixel(SpriteBatch batch, boolean darkMode) {
         batch.setColor(darkMode ? darkRedColor : darkerRedColor); // darker red for light mode
         batch.draw(redPixel, position.x, position.y, 2, 2);
-        batch.setColor(Color.WHITE); // Reset color
+        batch.setColor(colorLight); // Reset color
     }
 
 }
