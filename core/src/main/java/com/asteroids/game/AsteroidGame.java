@@ -59,7 +59,6 @@ public class AsteroidGame extends ApplicationAdapter {
     Player player;
     Array<Bullet> bullets;
     Array<Asteroid> asteroids;
-    // Array<Explosion> explosions = new Array<>();
 
     EnemyShip enemyShip;
     float ufoSpawnTimer = 0;
@@ -74,7 +73,8 @@ public class AsteroidGame extends ApplicationAdapter {
     Color lightColor = new Color(254/255f, 245/255f, 235/255f, 1f);
     Color fontColorDark = new Color(231 / 255f, 255 / 255f, 238 / 255f, 1.0f);
     Color fontColorLight = new Color(0.1f, 0.1f, 0.1f, 1.0f);
-
+    Color barColorLightMode = new Color(212/255f, 204/255f, 195/255f, 1f);
+    Color barColorDarkMode = new Color(39/255f, 34/255f, 59/255f, 1f);
     Preferences prefs;
 
     ArrayList<HighScore> highScores = new ArrayList<>();
@@ -119,11 +119,9 @@ public class AsteroidGame extends ApplicationAdapter {
             for (int j = asteroids.size - 1; j >= 0; j--) {
                 Asteroid asteroid = asteroids.get(j);
 
-                // Check for collision between bullet and asteroid
+                //Check for collision between bullet and asteroid
                 if (asteroid.getBounds().contains(bullet.position)) {
-                    // System.out.println("Explosion triggered at: " + bullet.position);
-                    // explosions.add(new Explosion(bullet.position.cpy()));
-                    // Remove bullet
+
                     bullets.removeIndex(i);
 
                     if (asteroid.size == 3) {
@@ -235,12 +233,16 @@ public class AsteroidGame extends ApplicationAdapter {
         fullscreenButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                if (isFullscreen) {
+                if (isFullscreen) { // switch to windowed mode
                     Gdx.graphics.setWindowedMode(windowedWidth, windowedHeight);
+                    gameViewport.update(windowedWidth, windowedHeight, true);
+                    barViewport.update(windowedWidth, windowedHeight, true);
                     isFullscreen = false;
-                } else {
+                } else { // switch to fullscreen mode
                     Graphics.DisplayMode displayMode = Gdx.graphics.getDisplayMode();
                     Gdx.graphics.setFullscreenMode(displayMode);
+                    gameViewport.update(displayMode.width, displayMode.height, true);
+                    barViewport.update(displayMode.width, displayMode.height, true);
                     isFullscreen = true;
                 }
             }
@@ -306,9 +308,7 @@ public class AsteroidGame extends ApplicationAdapter {
         if(Gdx.input.isKeyPressed(Input.Keys.RIGHT)) player.rotate(-1.5f);
         if(Gdx.input.isKeyPressed(Input.Keys.UP)) player.thrust();
         if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) player.shoot(bullets);
-        if(Gdx.input.isKeyJustPressed(Input.Keys.M)) {
-            darkMode = !darkMode;
-        }
+
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             previousGameState = gameState;
@@ -367,6 +367,8 @@ public class AsteroidGame extends ApplicationAdapter {
         Gdx.gl.glClearColor(currentBackground.r, currentBackground.g, currentBackground.b, 1.0f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+
+
         try {
             // Handle fullscreen toggle
             if (Gdx.input.isKeyJustPressed(Input.Keys.F11)) {
@@ -380,12 +382,29 @@ public class AsteroidGame extends ApplicationAdapter {
                 }
             }
 
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                if (gameState != GameState.SETTINGS) {
+                    previousGameState = gameState;
+                    gameState = GameState.SETTINGS;
+                    initSettingsUI();
+                    Gdx.input.setInputProcessor(settingsStage);
+                } else {
+                    // ESCAPE exits the pause/settings menu
+                    gameState = previousGameState != null ? previousGameState : GameState.TITLE;
+                    Gdx.input.setInputProcessor(null);
+                }
+            }
+
+            if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+                toggleDarkMode();
+            }
+
             barViewport.apply();
             screenCamera.update();
             shapeRenderer.setProjectionMatrix(screenCamera.combined);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             shapeRenderer.identity();
-            shapeRenderer.setColor(currentBackground);
+            shapeRenderer.setColor(darkMode ? barColorDarkMode : barColorLightMode);
             int screenWidth = Gdx.graphics.getWidth();
             int screenHeight = Gdx.graphics.getHeight();
             int gameX = gameViewport.getScreenX();
@@ -403,7 +422,6 @@ public class AsteroidGame extends ApplicationAdapter {
             shapeRenderer.rect(gameX, gameY + gameHeight, gameWidth, screenHeight - (gameY + gameHeight));
 
             shapeRenderer.end();
-
 
             gameViewport.apply();
             camera.update();
@@ -627,14 +645,6 @@ public class AsteroidGame extends ApplicationAdapter {
         if (asteroids.size == 0) {
             levelUp();
         }
-
-//        for (int i = explosions.size - 1; i >= 0; i--) {
-//            Explosion e = explosions.get(i);
-//            e.update(delta);
-//            if (e.isFinished()) {
-//                explosions.removeIndex(i);
-//            }
-//        }
     }
 
     void updateAsteroids(float delta) {
@@ -683,6 +693,10 @@ public class AsteroidGame extends ApplicationAdapter {
     void toggleDarkMode() {
         darkMode = !darkMode;
         targetBackground.set(darkMode ? darkColor : lightColor);
+        font.setColor(darkMode ? fontColorDark : fontColorLight);
+
+        layout.setText(font, layout.toString());
+
         prefs.putBoolean("darkMode", darkMode);
         prefs.flush();
     }
